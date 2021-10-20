@@ -96,6 +96,9 @@ namespace dyno
 		invK[pId] = mat_i;
 	}
 
+	/**
+		* @brief 
+		*/
 	template <typename Real, typename Coord, typename Matrix, typename NPair>
 	__global__ void EM_EnforceElasticity(
 		DArray<Coord> delta_position,
@@ -110,7 +113,8 @@ namespace dyno
 
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= position.size()) return;
-
+		
+		// Get pId's info
 		List<NPair>& restShape_i = restShapes[pId];
 		NPair np_i = restShape_i[0];
 		Coord rest_i = np_i.pos;
@@ -121,7 +125,8 @@ namespace dyno
 		Coord accPos = Coord(0);
 		Real accA = Real(0);
 		Real bulk_i = bulkCoefs[pId];
-
+		
+		// Get 
 		Real maxDist = Real(0);
 		for (int ne = 0; ne < size_i; ne++)
 		{
@@ -133,8 +138,8 @@ namespace dyno
 		}
 		maxDist = maxDist < EPSILON ? Real(1) : maxDist;
 		Real horizon = maxDist;
-
-
+		
+		// 
 		Real total_weight = 0.0f;
 		Matrix deform_i = Matrix(0.0f);
 		for (int ne = 0; ne < size_i; ne++)
@@ -151,7 +156,7 @@ namespace dyno
 
 				Coord p = (position[j] - position[pId]) / horizon;
 				Coord q = (rest_j - rest_i) / horizon*weight;
-
+				// for loop ?
 				deform_i(0, 0) += p[0] * q[0]; deform_i(0, 1) += p[0] * q[1]; deform_i(0, 2) += p[0] * q[2];
 				deform_i(1, 0) += p[1] * q[0]; deform_i(1, 1) += p[1] * q[1]; deform_i(1, 2) += p[1] * q[2];
 				deform_i(2, 0) += p[2] * q[0]; deform_i(2, 1) += p[2] * q[1]; deform_i(2, 2) += p[2] * q[2];

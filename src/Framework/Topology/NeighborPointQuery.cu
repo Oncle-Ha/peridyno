@@ -196,7 +196,7 @@ namespace dyno
 		int3 gId3 = hash.getIndex3(pos_ijk);
 
 		int counter = 0;
-		for (int c = 0; c < 27; c++)
+		for (int c = 0; c < 27; c++) // 3 * 3 Neighbor Box
 		{
 			int cId = hash.getIndex(gId3.x + offset_nq[c][0], gId3.y + offset_nq[c][1], gId3.z + offset_nq[c][2]);
 			if (cId >= 0) {
