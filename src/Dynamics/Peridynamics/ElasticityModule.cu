@@ -22,9 +22,11 @@ namespace dyno
 		DArray<Matrix> invK,
 		DArrayList<NPair> restShapes)
 	{
+		// Get pId's info
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= invK.size()) return;
 
+		// Get maxDist among x_i's pairs <x_i, x_j>
 		List<NPair>& restShape_i = restShapes[pId];
 		NPair np_i = restShape_i[0];
 		Coord rest_i = np_i.pos;
@@ -41,6 +43,7 @@ namespace dyno
 		maxDist = maxDist < EPSILON ? Real(1) : maxDist;
 		Real smoothingLength = maxDist;
 
+		// Get K(mat_i) = X * X
 		Real total_weight = 0.0f;
 		Matrix mat_i = Matrix(0);
 		for (int ne = 0; ne < size_i; ne++)
@@ -53,7 +56,7 @@ namespace dyno
 			{
 				Real weight = D_Weight(r, smoothingLength);
 				Coord q = (rest_j - rest_i) / smoothingLength*sqrt(weight);
-
+				// mat(ij) = Xi * Xj
 				mat_i(0, 0) += q[0] * q[0]; mat_i(0, 1) += q[0] * q[1]; mat_i(0, 2) += q[0] * q[2];
 				mat_i(1, 0) += q[1] * q[0]; mat_i(1, 1) += q[1] * q[1]; mat_i(1, 2) += q[1] * q[2];
 				mat_i(2, 0) += q[2] * q[0]; mat_i(2, 1) += q[2] * q[1]; mat_i(2, 2) += q[2] * q[2];
@@ -78,7 +81,8 @@ namespace dyno
 // 				mat_i(1, 0), mat_i(1, 1), mat_i(1, 2),
 // 				mat_i(2, 0), mat_i(2, 1), mat_i(2, 2));
 // 		}
-
+		
+		// Get inverser(mat)
 		polarDecomposition(mat_i, R, U, D, V);
 
 		if (mat_i.determinant() < EPSILON*smoothingLength)
@@ -110,11 +114,11 @@ namespace dyno
 		Real mu,
 		Real lambda)
 	{
-
+		// Get pId's info
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= position.size()) return;
 		
-		// Get pId's info
+		
 		List<NPair>& restShape_i = restShapes[pId];
 		NPair np_i = restShape_i[0];
 		Coord rest_i = np_i.pos;
@@ -126,7 +130,7 @@ namespace dyno
 		Real accA = Real(0);
 		Real bulk_i = bulkCoefs[pId];
 		
-		// Get 
+		
 		Real maxDist = Real(0);
 		for (int ne = 0; ne < size_i; ne++)
 		{
@@ -139,7 +143,7 @@ namespace dyno
 		maxDist = maxDist < EPSILON ? Real(1) : maxDist;
 		Real horizon = maxDist;
 		
-		// 
+		// Get Y * X
 		Real total_weight = 0.0f;
 		Matrix deform_i = Matrix(0.0f);
 		for (int ne = 0; ne < size_i; ne++)
@@ -156,7 +160,7 @@ namespace dyno
 
 				Coord p = (position[j] - position[pId]) / horizon;
 				Coord q = (rest_j - rest_i) / horizon*weight;
-				// for loop ?
+				
 				deform_i(0, 0) += p[0] * q[0]; deform_i(0, 1) += p[0] * q[1]; deform_i(0, 2) += p[0] * q[2];
 				deform_i(1, 0) += p[1] * q[0]; deform_i(1, 1) += p[1] * q[1]; deform_i(1, 2) += p[1] * q[2];
 				deform_i(2, 0) += p[2] * q[0]; deform_i(2, 1) += p[2] * q[1]; deform_i(2, 2) += p[2] * q[2];
@@ -164,7 +168,7 @@ namespace dyno
 			}
 		}
 
-
+		// Get \hat{F} = (Y * X)(X * X)^-1
 		if (total_weight > EPSILON)
 		{
 			deform_i *= (1.0f / total_weight);
@@ -192,7 +196,7 @@ namespace dyno
 // 				mat_i(1, 0), mat_i(1, 1), mat_i(1, 2),
 // 				mat_i(2, 0), mat_i(2, 1), mat_i(2, 2));
 // 		}
-
+	
 		for (int ne = 0; ne < size_i; ne++)
 		{
 			NPair np_j = restShape_i[ne];
@@ -202,35 +206,40 @@ namespace dyno
 			Coord cur_pos_j = position[j];
 			Real r = (rest_j - rest_i).norm();
 
-			if (r > 0.01f*horizon)
+			if (r > 0.01f*horizon) // too close will be ignore
 			{
 				Real weight = D_Weight(r, horizon);
 
+				// Y*
 				Coord rest_dir_ij = deform_i*(rest_i - rest_j);
+				// Y
 				Coord cur_dir_ij = cur_pos_i - cur_pos_j;
 
+				// dir
 				cur_dir_ij = cur_dir_ij.norm() > EPSILON ? cur_dir_ij.normalize() : Coord(0);
 				rest_dir_ij = rest_dir_ij.norm() > EPSILON ? rest_dir_ij.normalize() : Coord(0, 0, 0);
-
+				
+				// dev
 				Real mu_ij = mu*bulk_i* D_Weight(r, horizon);
-				Coord mu_pos_ij = position[j] + r*rest_dir_ij;
-				Coord mu_pos_ji = position[pId] - r*rest_dir_ij;
+				Coord mu_pos_ij = position[j] + r*rest_dir_ij; // -Tj = -(.+.)
+				Coord mu_pos_ji = position[pId] - r*rest_dir_ij; 
 
+				// iso
 				Real lambda_ij = lambda*bulk_i*D_Weight(r, horizon);
 				Coord lambda_pos_ij = position[j] + r*cur_dir_ij;
 				Coord lambda_pos_ji = position[pId] - r*cur_dir_ij;
 
-				Coord delta_pos_ij = mu_ij*mu_pos_ij + lambda_ij*lambda_pos_ij;
-				Real delta_weight_ij = mu_ij + lambda_ij;
+				Coord delta_pos_ij = mu_ij*mu_pos_ij + lambda_ij*lambda_pos_ij;// - (-T_j)
+				Real delta_weight_ij = mu_ij + lambda_ij; // ?
 
 				Coord delta_pos_ji = mu_ij*mu_pos_ji + lambda_ij*lambda_pos_ji;
-
+				
 				accA += delta_weight_ij;
 				accPos += delta_pos_ij;
 
-
+				
 				atomicAdd(&weights[j], delta_weight_ij);
-				atomicAdd(&delta_position[j][0], delta_pos_ji[0]);
+				atomicAdd(&delta_position[j][0], delta_pos_ji[0]);// TODO: ?Based on assumption that \rho_i, volume_j is constant, Fi -> j's position
 				atomicAdd(&delta_position[j][1], delta_pos_ji[1]);
 				atomicAdd(&delta_position[j][2], delta_pos_ji[2]);
 			}
@@ -251,7 +260,7 @@ namespace dyno
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= position.size()) return;
-
+		// TODO: ?
 		position[pId] = (old_position[pId] + delta_position[pId]) / (1.0+delta_weights[pId]);
 	}
 
@@ -333,7 +342,10 @@ namespace dyno
 		EM_InitBulkStiffness << <pDims, BLOCK_SIZE >> > (mBulkStiffness);
 	}
 
-
+	/**
+		* @brief \hat{F} = (Y*X)(X*X)^-1
+				 K = X*X : shape tensor
+		*/
 	template<typename TDataType>
 	void ElasticityModule<TDataType>::computeInverseK()
 	{

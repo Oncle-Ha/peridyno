@@ -93,7 +93,7 @@ namespace dyno {
 		DEF_VAR(uint, IterationNumber, 10, "Iteration number");
 
 	protected:
-		DArray<Real> mBulkStiffness;
+		DArray<Real> mBulkStiffness; //  where to input? see: EM_InitBulkStiffness
 		DArray<Real> mWeights;
 
 		DArray<Coord> mDisplacement;

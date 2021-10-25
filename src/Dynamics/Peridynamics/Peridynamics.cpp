@@ -12,14 +12,14 @@ namespace dyno
 	Peridynamics<TDataType>::Peridynamics()
 		: GroupModule()
 	{
-		// update velocity & position
+		
 		auto m_integrator = std::make_shared<ParticleIntegrator<TDataType>>();
 		this->inPosition()->connect(m_integrator->inPosition());
 		this->inVelocity()->connect(m_integrator->inVelocity());
 		this->inForce()->connect(m_integrator->inForceDensity());
 		this->pushModule(m_integrator);
 
-		//
+		
 		auto m_nbrQuery = std::make_shared<NeighborPointQuery<TDataType>>();
 		this->varHorizon()->connect(m_nbrQuery->inRadius());
 		this->inPosition()->connect(m_nbrQuery->inPosition());
