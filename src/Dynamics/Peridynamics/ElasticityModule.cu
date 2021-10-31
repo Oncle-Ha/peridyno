@@ -161,7 +161,7 @@ namespace dyno
 
 				Coord p = (position[j] - position[pId]) / horizon;
 				Coord q = (rest_j - rest_i) / horizon*weight;
-				
+				// Y * X
 				deform_i(0, 0) += p[0] * q[0]; deform_i(0, 1) += p[0] * q[1]; deform_i(0, 2) += p[0] * q[2];
 				deform_i(1, 0) += p[1] * q[0]; deform_i(1, 1) += p[1] * q[1]; deform_i(1, 2) += p[1] * q[2];
 				deform_i(2, 0) += p[2] * q[0]; deform_i(2, 1) += p[2] * q[1]; deform_i(2, 2) += p[2] * q[2];

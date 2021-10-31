@@ -74,7 +74,7 @@ namespace dyno
 		for (int ne = 0; ne < nbSize; ne++)
 		{
 			int j = list_i[ne];
-
+			// TODO: norm -> abs?
 			//1
 			Real r1 = (initTo_i - initFrom[j]).norm();//j->to
 
@@ -87,7 +87,7 @@ namespace dyno
 			{
 				Real weight1 = PP_Weight(r1, smoothingLength);
 				Coord q = (initFrom[j] - initTo_i) / smoothingLength * sqrt(weight1);
-
+				// X * X
 				mat_i(0, 0) += q[0] * q[0]; mat_i(0, 1) += q[0] * q[1]; mat_i(0, 2) += q[0] * q[2];
 				mat_i(1, 0) += q[1] * q[0]; mat_i(1, 1) += q[1] * q[1]; mat_i(1, 2) += q[1] * q[2];
 				mat_i(2, 0) += q[2] * q[0]; mat_i(2, 1) += q[2] * q[1]; mat_i(2, 2) += q[2] * q[2];
@@ -101,7 +101,7 @@ namespace dyno
 
 				Coord p = (from[j] - to[pId]) / smoothingLength;
 				Coord q2 = (initFrom[j] - initTo_i) / smoothingLength * weight2;
-
+				// Y * X
 				deform_i(0, 0) += p[0] * q2[0]; deform_i(0, 1) += p[0] * q2[1]; deform_i(0, 2) += p[0] * q2[2];
 				deform_i(1, 0) += p[1] * q2[0]; deform_i(1, 1) += p[1] * q2[1]; deform_i(1, 2) += p[1] * q2[2];
 				deform_i(2, 0) += p[2] * q2[0]; deform_i(2, 1) += p[2] * q2[1]; deform_i(2, 2) += p[2] * q2[2];
@@ -127,7 +127,7 @@ namespace dyno
 		mat_i = V * D * U.transpose(); //inverse 
 		//
 
-		//2
+		//2 F
 		if (total_weight2 > EPSILON)
 		{
 			deform_i *= (1.0f / total_weight2);
@@ -137,8 +137,8 @@ namespace dyno
 		{
 			total_weight2 = 1.0f;
 		}
-
-		//get new position
+		// 计算出 F 后，
+		//get new position 
 		for (int ne = 0; ne < nbSize; ne++)
 		{
 			int j = list_i[ne];
