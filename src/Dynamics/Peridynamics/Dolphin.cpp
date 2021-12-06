@@ -18,6 +18,7 @@ namespace dyno
     {
         auto mixSet = std::make_shared<MixSet<TDataType>>();
 		this->currentTopology()->setDataPtr(mixSet);
+        this->currentPoints()->setDataPtr(mixSet->getPointSet());
 
         this->varHorizon()->setValue(0.0085);
 

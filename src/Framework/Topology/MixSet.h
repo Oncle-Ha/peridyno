@@ -132,12 +132,13 @@ namespace dyno
 		void copyFrom(MixSet<TDataType> mixSet);
 
 	protected:
+		// TODO: 改为继承PointSet
         std::shared_ptr<TriangleSet<TDataType>> m_triSet;       // 2D
-        std::shared_ptr<TetrahedronSet<TDataType>> m_tetSet;    // 3D 分别执行碰撞等
+        std::shared_ptr<TetrahedronSet<TDataType>> m_tetSet;    // 3D 
 
-        std::shared_ptr<PointSet<TDataType>> m_ptSet; 		   // 2D&3D所有顶点用Peridynamic做弹性
-        DArray<NodeType> m_nodeType;           // 顶点类型
+        std::shared_ptr<PointSet<TDataType>> m_ptSet; 		   // 2D&3D particles 
+        DArray<NodeType> m_nodeType; 
 
-        DArray<int> m_joints;    // 2D和3D交界点的对应点
+        DArray<int> m_joints;    // 2D和3D交界点的对应点 
 	};
 }

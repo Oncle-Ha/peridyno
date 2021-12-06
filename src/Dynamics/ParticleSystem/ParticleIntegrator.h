@@ -3,6 +3,7 @@
 #include "Attribute.h"
 
 namespace dyno {
+	// update Particle Position & velocity
 	template<typename TDataType>
 	class ParticleIntegrator : public NumericalIntegrator
 	{
