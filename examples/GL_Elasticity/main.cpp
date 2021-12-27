@@ -27,8 +27,8 @@ int main()
 	// bunny->loadSurface("../../data/bunny/bunny_mesh.obj");
 	bunny->loadParticles("../../data/dolphin/Dolphin_points.obj");
 	bunny->loadSurface("../../data/dolphin/Dolphin_surface.obj");	
-	bunny->scale(1.0f);
-	bunny->translate(Vec3f(0.5f, 0.1f, 0.5f));
+	bunny->scale(0.2f);
+	bunny->translate(Vec3f(0.5f, 0.05f, 0.5f));
 	bunny->setVisible(true);
 
 	bool useVTK = true;

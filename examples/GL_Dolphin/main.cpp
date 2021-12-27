@@ -29,7 +29,7 @@ int main()
 
 	dolphin->setMass(1.0f);
 	dolphin->loadMixFile("../../data/dolphin/Dolphin");
-	dolphin->scale(1.0f);
+	dolphin->scale(0.2f);
 	dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
 	dolphin->setVisible(true);
 
@@ -39,14 +39,14 @@ int main()
 
 	engine = new GLRenderEngine;
 	// set point 
-	auto pointRenderer = std::make_shared<GLPointVisualModule>();
-	pointRenderer->setColor(Vec3f(1, 0.2, 1));
-	pointRenderer->setColorMapMode(GLPointVisualModule::PER_OBJECT_SHADER);
-	dolphin->getSurfaceNode()->currentTopology()->connect(pointRenderer->inPointSet());
-	dolphin->getSurfaceNode()->graphicsPipeline()->pushModule(pointRenderer);
-	// dolphin->currentPoints()->connect(pointRenderer->inPointSet());
-	// dolphin->currentVelocity()->connect(pointRenderer->inColor());
+	//auto pointRenderer = std::make_shared<GLPointVisualModule>();
+	//pointRenderer->setColor(Vec3f(1, 0.2, 1));
+	//pointRenderer->setColorMapMode(GLPointVisualModule::PER_OBJECT_SHADER);
 
+	//dolphin->getSurfaceNode()->currentTopology()->connect(pointRenderer->inPointSet());
+	//dolphin->getSurfaceNode()->graphicsPipeline()->pushModule(pointRenderer);
+	//dolphin->currentPoints()->connect(pointRenderer->inPointSet());
+	//dolphin->currentVelocity()->connect(pointRenderer->inColor());
 	// dolphin->graphicsPipeline()->pushModule(pointRenderer);
 
 	// pointRenderer->setVisible(false);
