@@ -29,7 +29,7 @@ int main()
 
 	dolphin->setMass(1.0f);
 	dolphin->loadMixFile("../../data/dolphin/Dolphin");
-	dolphin->scale(0.2f);
+	dolphin->scale(0.2f); // 太大会导致粒子间距过大以至于邻居为空
 	dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
 	dolphin->setVisible(true);
 
@@ -45,9 +45,11 @@ int main()
 
 	//dolphin->getSurfaceNode()->currentTopology()->connect(pointRenderer->inPointSet());
 	//dolphin->getSurfaceNode()->graphicsPipeline()->pushModule(pointRenderer);
+
 	//dolphin->currentPoints()->connect(pointRenderer->inPointSet());
 	//dolphin->currentVelocity()->connect(pointRenderer->inColor());
-	// dolphin->graphicsPipeline()->pushModule(pointRenderer);
+
+	//dolphin->graphicsPipeline()->pushModule(pointRenderer);
 
 	// pointRenderer->setVisible(false);
 

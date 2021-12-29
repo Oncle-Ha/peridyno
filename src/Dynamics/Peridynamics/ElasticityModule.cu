@@ -223,7 +223,7 @@ namespace dyno
 				rest_dir_ij = rest_dir_ij.norm() > EPSILON ? rest_dir_ij.normalize() : Coord(0, 0, 0);
 				
 				// dev
-				Real mu_ij = mu*bulk_i* D_Weight(r, horizon);
+				Real mu_ij = mu*bulk_i* D_Weight(r, horizon); // mu_ij要针对三角面片进行调整
 				Coord mu_pos_ij = position[j] + r*rest_dir_ij; 
 				Coord mu_pos_ji = position[pId] - r*rest_dir_ij; 
 
