@@ -15,6 +15,7 @@ namespace dyno
         ThreeD,
     };   
     
+
     class FKey
 	{
 	public:
@@ -91,7 +92,7 @@ namespace dyno
 	};
     
 	template<typename TDataType>
-	class MixSet : public TopologyModule
+	class MixSet : public PointSet<TDataType>
 	{
 		DECLARE_CLASS_1(PointSet, TDataType)
 	public:
@@ -107,38 +108,65 @@ namespace dyno
         void loadMixFile(std::string filename);
         
         // return coords
-        DArray<Coord>&  get2DPoints() { return this->m_triSet->getPoints();}
-        DArray<Coord>&  get3DPoints() { return this->m_tetSet->getPoints();}
-        DArray<Coord>&  getAllPoints() { return this->m_ptSet->getPoints();}
+        DArray<Coord>&  getTriPoints() { m_triCoordsTmp.resize(m_triPointSize); m_triCoordsTmp.assign(m_coords, m_triPointSize, 0, 0); return m_triCoordsTmp;}
+        DArray<Coord>&  getTetPoints() { m_tetCoordsTmp.resize(m_tetPointSize); m_tetCoordsTmp.assign(m_coords, m_tetPointSize, 0, m_triPointSize); return m_tetCoordsTmp;}
+        DArray<Coord>&  getAllPoints() { return m_coords;}
 
 		// return Set
-		std::shared_ptr<PointSet<TDataType>>		getPointSet()		{ return this->m_ptSet; }
-		std::shared_ptr<TriangleSet<TDataType>>		getTriangleSet()	{ return this->m_triSet;}
-		std::shared_ptr<TetrahedronSet<TDataType>>	getTetrahedronSet() { return this->m_tetSet;}
+		// std::shared_ptr<PointSet<TDataType>>		getPointSet()		{ return this->getPoints(); }
+		// std::shared_ptr<TriangleSet<TDataType>>		getTriangleSet()	{ return this->m_triSet;}
+		// std::shared_ptr<TetrahedronSet<TDataType>>	getTetrahedronSet() { return this->m_tetSet;}
 
-		// Transform
-		void scale(Real s);
-		void scale(Coord s);
-		void translate(Coord t);
-
-        // sync coords
-        void update2DPoints();
-        void update3DPoints();
-        void updateAllPoints();
+		// return DArray Tri, Tet
+		DArray<Triangle>& getTriangles() { return m_triangles; }
+		DArray<Tetrahedron>& getTetrahedrons() { return m_tethedrons; }
 
         // get joint between 2D & 3D
         void getJointVer();
 
 		void copyFrom(MixSet<TDataType> mixSet);
 
+		// Point
+		void setTriPoints(std::vector<Coord>& pos);
+
+		void setTetPoints(std::vector<Coord>& pos);
+
+		// Tri
+		void loadObjFile(std::string filename);
+
+		void setTriangles(std::vector<Triangle>& triangles);
+
+		void copyFrom(TriangleSet<TDataType>& triangleSet);
+
+		// Tet
+		void loadTetFile(std::string filename);
+
+		void setTetrahedrons(std::vector<Tetrahedron>& tetrahedrons);
+
+		void copyFrom(TetrahedronSet<TDataType> tetSet);
+
 	protected:
-		// TODO: 改为继承PointSet
-        std::shared_ptr<TriangleSet<TDataType>> m_triSet;       // 2D
-        std::shared_ptr<TetrahedronSet<TDataType>> m_tetSet;    // 3D 
+		// // TODO: 改为继承PointSet
+        // std::shared_ptr<TriangleSet<TDataType>> m_triSet;       // 2D
+        // std::shared_ptr<TetrahedronSet<TDataType>> m_tetSet;    // 3D 
 
-        std::shared_ptr<PointSet<TDataType>> m_ptSet; 		   // 2D&3D particles 
-        DArray<NodeType> m_nodeType; 
-
+        // std::shared_ptr<PointSet<TDataType>> m_ptSet; 		   // 2D&3D particles 
+        
+		
         DArray<int> m_joints;    // 2D和3D交界点的对应点 
+
+		// PointSet : m_coords  m_pointNeighbors
+		DArray<NodeType> m_verType; 
+
+		// DArrayList<TopoNumber> m_ver2Topo; 
+		// DArray<Edge> m_edges; // 不需要
+		DArray<Coord> m_triCoordsTmp;
+		DArray<Coord> m_tetCoordsTmp;
+
+		DArray<Triangle> m_triangles;
+		DArray<Tetrahedron> m_tethedrons;
+		
+		int m_tetPointSize;
+		int m_triPointSize;
 	};
 }

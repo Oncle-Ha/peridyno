@@ -18,7 +18,7 @@ namespace dyno
     {
         auto mixSet = std::make_shared<MixSet<TDataType>>();
 		this->currentTopology()->setDataPtr(mixSet);
-        this->currentPoints()->setDataPtr(mixSet->getPointSet());
+        // this->currentPoints()->setDataPtr(mixSet->getPointSet());
 
         this->varHorizon()->setValue(0.0085);
 
@@ -39,7 +39,7 @@ namespace dyno
 		//Set the topology mapping from MixSet to TriangleSet
 		auto surfaceMapping = this->template addTopologyMapping<PointSetToPointSet<TDataType>>("surface_mapping");
 		// auto mixSet = TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr());
-        auto ptSet = mixSet->getPointSet();
+        auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
 
 		surfaceMapping->setFrom(ptSet);
 		surfaceMapping->setTo(triSet);        
@@ -73,7 +73,7 @@ namespace dyno
     void Dolphin<TDataType>::resetStates()
     {
         auto mixSet = TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr());
-        auto ptSet = mixSet->getPointSet();
+        auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
 		if (ptSet == nullptr) return;
 
 		auto pts = ptSet->getPoints();
@@ -115,7 +115,7 @@ namespace dyno
     void Dolphin<TDataType>::updateTopology()
     {
         auto mixSet = TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr());
-        auto ptSet = mixSet->getPointSet();
+		auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
 
         auto& pts = ptSet->getPoints();
         pts.assign(this->currentPosition()->getData());
@@ -125,8 +125,6 @@ namespace dyno
             (*iter)->apply();
         }
 
-        mixSet->update2DPoints();
-        mixSet->update3DPoints();
     }
     
 	template<typename TDataType>

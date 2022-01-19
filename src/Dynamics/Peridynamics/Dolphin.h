@@ -42,7 +42,7 @@ namespace dyno
 
 		DEF_EMPTY_CURRENT_ARRAYLIST(NPair, RestShape, DeviceType::GPU, "Storing neighbors");
 
-        DEF_INSTANCE_STATE(PointSet<TDataType>, Points, ""); // TODO: remove this
+        // DEF_INSTANCE_STATE(PointSet<TDataType>, Points, ""); // TODO: remove this
     protected:
 
         void resetStates() override; // set->current
