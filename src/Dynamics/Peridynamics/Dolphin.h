@@ -2,6 +2,7 @@
 #include "ParticleSystem/ParticleSystem.h"
 #include "NeighborData.h"
 #include "Topology/PointSet.h"
+#include "Topology/JointTree.h"
 
 namespace dyno
 {
@@ -43,6 +44,10 @@ namespace dyno
 		DEF_EMPTY_CURRENT_ARRAYLIST(NPair, RestShape, DeviceType::GPU, "Storing neighbors");
 
         // DEF_INSTANCE_STATE(PointSet<TDataType>, Points, ""); // TODO: remove this
+
+        std::vector<std::shared_ptr<JointTree<TDataType>>> m_jointMap;
+        std::vector<std::shared_ptr<Cluster<DataType3f>>> m_clusters;
+
     protected:
 
         void resetStates() override; // set->current

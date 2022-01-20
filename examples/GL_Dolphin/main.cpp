@@ -9,6 +9,7 @@
 #include <ParticleSystem/StaticBoundary.h>
 
 #include <ofbx.h>
+#include <Cluster.h>
 
 // Internal OpenGL Renderer
 #include <GLRenderEngine.h>
@@ -19,9 +20,10 @@ using namespace dyno;
 
 // TODO: move to Topology
 ofbx::IScene* g_scene = nullptr;
+std::shared_ptr<Dolphin<DataType3f>> temp_Dolphin;
+
 bool init(const char* filepath)
 {
-
 	FILE* fp = fopen(filepath, "rb");
 
 	if (!fp) return false;
@@ -50,7 +52,9 @@ void copyVec(DataType3f::Coord &dest, ofbx::Vec3 src)
 
 void getModelProperties(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3f>> cur)
 {
-	cur->id = object.id;
+	cur->id = object-id;
+	temp_Dolphin->m_jointMap.push(cur);
+	
 	copyVec(cur->PreRotation, object.getPreRotation());
 	copyVec(cur->LclTranslation, object.getLocalTranslation());
 	copyVec(cur->LclRotation, object.getLocalRotation());
@@ -58,40 +62,45 @@ void getModelProperties(const ofbx::Object& object, std::shared_ptr<JointTree<Da
 }
 
 
-void getLimbNode(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3f>> parent, std::shared_ptr<JointTree<DataType3f>> limbRoot)
+void getLimbNode(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3f>> parent)
 {
-	if (object.getType() != ofbx::Object::Type::LIMB_NODE && parent != limbRoot) return;
+	if (object.getType() != ofbx::Object::Type::LIMB_NODE && parent != nullptr) return;
 
 	std::shared_ptr<JointTree<DataType3f>> cur;
 
 	if (object.getType() == ofbx::Object::Type::LIMB_NODE){
 
 		cur = std::make_shared<JointTree<DataType3f>>();
-		parent->children.push_back(cur);
+		if(parent != nullptr) parent->children.push_back(cur);
 		cur->parent = parent;
 		getModelProperties(object, cur);
 	}
 	int i = 0;
 	while (ofbx::Object* child = object.resolveObjectLink(i))
 	{
-		if (object.getType() == ofbx::Object::Type::LIMB_NODE) getLimbNode(*child, cur, limbRoot);
-		else getLimbNode(*child, parent, limbRoot);
+		if (object.getType() == ofbx::Object::Type::LIMB_NODE) getLimbNode(*child, cur);
+		else getLimbNode(*child, parent);
 		++i;
 	}	
 }
 
-void getLimbNodes(const ofbx::IScene& scene, std::shared_ptr<JointTree<DataType3f>> limbRoot)
+void getLimbNodes(const ofbx::IScene& scene)
 {
 	const ofbx::Object* root = scene.getRoot();
-	if (root) getLimbNode(*root, limbRoot, limbRoot);
+	if (root) getLimbNode(*root, nullptr);
 }
 
-void loadFBX(const char* filepath, std::shared_ptr<JointTree<DataType3f>> limbRoot)
+void loadFBX(const char* filepath)
 {
 	init(filepath);
-	getLimbNodes(*g_scene, limbRoot);
+	getLimbNodes(*g_scene);
 }
 
+// TODO import Skin
+void getClusters()
+{
+
+}
 
 int main()
 {
@@ -104,10 +113,13 @@ int main()
 
 	// set dolphin
 	std::shared_ptr<Dolphin<DataType3f>> dolphin = std::make_shared<Dolphin<DataType3f>>();
+	temp_Dolphin = dolphin;
 	root->addParticleSystem(dolphin); 
 
 	dolphin->setMass(1.0f);
 	dolphin->loadMixFile("../../data/dolphin/Dolphin");
+	loadFBX("../../data/dolphin/Dolphin/Dolphin_Low.fbx");
+
 	dolphin->scale(0.2f); // 太大会导致粒子间距过大以至于邻居为空
 	dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
 	dolphin->setVisible(true);

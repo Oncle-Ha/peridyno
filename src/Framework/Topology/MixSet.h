@@ -152,7 +152,6 @@ namespace dyno
 
         // std::shared_ptr<PointSet<TDataType>> m_ptSet; 		   // 2D&3D particles 
         
-		
         DArray<int> m_joints;    // 2D和3D交界点的对应点 
 
 		// PointSet : m_coords  m_pointNeighbors

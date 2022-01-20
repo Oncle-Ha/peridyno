@@ -43,6 +43,10 @@ namespace dyno
 
 		surfaceMapping->setFrom(ptSet);
 		surfaceMapping->setTo(triSet);        
+
+        //Create a node for joint
+        // m_jointNode = this->template createAncestor<Node>("Joint");
+        // auto jointTree = m_jointNode->template setTopologyModule<JointTree<TDataType>>("joint_tree");
     }
 
     template<typename TDataType>
