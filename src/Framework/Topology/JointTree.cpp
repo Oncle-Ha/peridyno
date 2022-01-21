@@ -83,6 +83,13 @@ namespace dyno
     //     return evalLocal(getLocalTranslation(), getLocalRotation(), getLocalScaling());
     // }
 
+    // TODO
+	template<typename TDataType>
+    Mat4f JointTree<TDataType>::getGlobalTransform()
+    {
+		return Mat4f(0.0);
+    }
+
 #ifdef PRECISION_FLOAT
 	template class JointTree<DataType3f>;
 #else

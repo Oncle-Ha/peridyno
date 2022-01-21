@@ -4,6 +4,7 @@
 #include "Topology/PointSet.h"
 #include "Topology/MixSet.h"
 #include "Mapping/PointSetToPointSet.h"
+#include "Mapping/JointTreeToPointSet.h"
 #include "Topology/NeighborPointQuery.h"
 #include "Peridynamics/Peridynamics.h"
 #include "SharedFunc.h"
@@ -44,9 +45,10 @@ namespace dyno
 		surfaceMapping->setFrom(ptSet);
 		surfaceMapping->setTo(triSet);        
 
-        //Create a node for joint
-        // m_jointNode = this->template createAncestor<Node>("Joint");
-        // auto jointTree = m_jointNode->template setTopologyModule<JointTree<TDataType>>("joint_tree");
+        // Set the Topology mapping from MixSet to joinTree
+        auto jointMapping = this->template addTopologyMapping<JointTreeToPointSet<TDataType>>("joint_mapping");
+        jointMapping->set(ptSet, &m_clusters, &m_jointMap);
+
     }
 
     template<typename TDataType>

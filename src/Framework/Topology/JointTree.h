@@ -20,7 +20,7 @@ namespace dyno
         ~JointTree();
 
         void copyFrom(JointTree<TDataType>& jointTree);
-
+        Mat4f getGlobalTransform();
         
         unsigned long long id;
         Coord PreRotation;
