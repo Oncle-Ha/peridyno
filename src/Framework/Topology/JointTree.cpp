@@ -16,6 +16,11 @@ namespace dyno
         LclScaling = Coord(0);
     }
     
+    template<typename TDataType>
+    JointTree<TDataType>::~JointTree()
+    {
+
+    }
 
     // TODO Global Local
     // Matrix Object::evalLocal(const Vec3& translation, const Vec3& rotation) const

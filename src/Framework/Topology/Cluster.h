@@ -10,15 +10,18 @@ namespace dyno
     template<typename TDataType>
 	class Cluster
 	{ 
+        // DECLARE_CLASS_1(Cluster, TDataType)
 	public:
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
 		typedef typename TDataType::Matrix Matrix;
 
         Cluster();
+        Cluster(const int*, int, const double*, int, double*, double*);
         ~Cluster();
         
-        DArray<int> m_indexes;
+
+        DArray<int> m_indices;
         DArray<Real> m_weights;
         // Skeleton -> Mesh : M_t * M_tl^-1
         Mat4f m_transform; // M_t

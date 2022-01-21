@@ -3,6 +3,7 @@
 #include "NeighborData.h"
 #include "Topology/PointSet.h"
 #include "Topology/JointTree.h"
+#include "Topology/Cluster.h"
 
 namespace dyno
 {
@@ -46,7 +47,7 @@ namespace dyno
         // DEF_INSTANCE_STATE(PointSet<TDataType>, Points, ""); // TODO: remove this
 
         std::vector<std::shared_ptr<JointTree<TDataType>>> m_jointMap;
-        std::vector<std::shared_ptr<Cluster<DataType3f>>> m_clusters;
+        std::vector<std::shared_ptr<Cluster<TDataType>>> m_clusters;
 
     protected:
 

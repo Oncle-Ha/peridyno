@@ -3,13 +3,14 @@
 #include <SceneGraph.h>
 #include <Topology/MixSet.h>
 #include <Topology/JointTree.h>
+#include <Topology/Cluster.h>
 #include <Peridynamics/Dolphin.h>
 #include <Peridynamics/ElasticBody.h>
 #include <Peridynamics/ElasticityModule.h>
 #include <ParticleSystem/StaticBoundary.h>
 
 #include <ofbx.h>
-#include <Cluster.h>
+
 
 // Internal OpenGL Renderer
 #include <GLRenderEngine.h>
@@ -52,19 +53,20 @@ void copyVec(DataType3f::Coord &dest, ofbx::Vec3 src)
 
 void getModelProperties(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3f>> cur)
 {
-	cur->id = object-id;
-	temp_Dolphin->m_jointMap.push(cur);
-	
+	cur->id = object.id;
+
 	copyVec(cur->PreRotation, object.getPreRotation());
 	copyVec(cur->LclTranslation, object.getLocalTranslation());
 	copyVec(cur->LclRotation, object.getLocalRotation());
 	copyVec(cur->LclScaling, object.getLocalScaling());
+
+	temp_Dolphin->m_jointMap.push_back(cur);
 }
 
 
 void getLimbNode(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3f>> parent)
 {
-	if (object.getType() != ofbx::Object::Type::LIMB_NODE && parent != nullptr) return;
+	if (object.getType() != ofbx::Object::Type::LIMB_NODE) return;
 
 	std::shared_ptr<JointTree<DataType3f>> cur;
 
@@ -84,23 +86,61 @@ void getLimbNode(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3
 	}	
 }
 
-void getLimbNodes(const ofbx::IScene& scene)
+
+// import Skin
+// For one mesh
+void getClusterProperties(const ofbx::Object& object)
+{
+	ofbx::Cluster* obj_cluster = (ofbx::Cluster*)&object;
+	std::shared_ptr<Cluster<DataType3f>> temp_cluster = std::make_shared<Cluster<DataType3f>>(
+		obj_cluster->getIndices(), obj_cluster->getIndicesCount(),
+		obj_cluster->getWeights(), obj_cluster->getWeightsCount(),
+		obj_cluster->getTransformMatrix().m, obj_cluster->getTransformLinkMatrix().m);
+	int num = 0; int size = temp_Dolphin->m_jointMap.size();
+	for(; num < size; ++num)
+	if(obj_cluster->getLink()->id == temp_Dolphin->m_jointMap[num]->id) break;
+
+	assert(num != size);
+
+	temp_cluster->m_jointIndex = num;
+
+	temp_Dolphin->m_clusters.push_back(temp_cluster);
+}
+
+void getCluster(const ofbx::Object& object)
+{
+	if (object.getType() == ofbx::Object::Type::CLUSTER){
+		getClusterProperties(object);
+	}else {
+		int i = 0;
+		while (ofbx::Object* child = object.resolveObjectLink(i))
+		{
+			getCluster(*child);
+			++i;
+		}			
+	}
+}
+
+void getNodes(const ofbx::IScene& scene)
 {
 	const ofbx::Object* root = scene.getRoot();
-	if (root) getLimbNode(*root, nullptr);
+	if (root) {
+		int i = 0;
+		while (ofbx::Object* child = root->resolveObjectLink(i))
+		{
+			getLimbNode(*child, nullptr);
+			++i;
+		}			
+	}
+	getCluster(*root);
 }
 
 void loadFBX(const char* filepath)
 {
 	init(filepath);
-	getLimbNodes(*g_scene);
+	getNodes(*g_scene);
 }
 
-// TODO import Skin
-void getClusters()
-{
-
-}
 
 int main()
 {
@@ -118,7 +158,7 @@ int main()
 
 	dolphin->setMass(1.0f);
 	dolphin->loadMixFile("../../data/dolphin/Dolphin");
-	loadFBX("../../data/dolphin/Dolphin/Dolphin_Low.fbx");
+	loadFBX("../../data/dolphin/Dolphin_Particles.fbx");
 
 	dolphin->scale(0.2f); // 太大会导致粒子间距过大以至于邻居为空
 	dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
