@@ -24,7 +24,7 @@ namespace dyno
         DArray<int> m_indices;
         DArray<Real> m_weights;
         // Skeleton -> Mesh : M_t * M_tl^-1
-        Mat4f m_transform; // M_t
+        Mat4f m_transform; // M_t ?
         Mat4f m_transformLink; // M_tl
 
         int m_jointIndex; // m_jointMap[index]

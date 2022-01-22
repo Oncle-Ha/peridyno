@@ -1,6 +1,9 @@
 #pragma once
 #include "JointTree.h"
 
+#define cos_angle(angle) cos(angle / 180.0f * 3.1415926)
+#define sin_angle(angle) sin(angle / 180.0f * 3.1415926)
+
 namespace dyno
 {
     IMPLEMENT_CLASS_1(JointTree, TDataType)
@@ -22,7 +25,7 @@ namespace dyno
 
     }
 
-    // TODO Global Local
+    // TODO Local
     // Matrix Object::evalLocal(const Vec3& translation, const Vec3& rotation) const
     // {
     //     return evalLocal(translation, rotation, getLocalScaling());
@@ -83,11 +86,53 @@ namespace dyno
     //     return evalLocal(getLocalTranslation(), getLocalRotation(), getLocalScaling());
     // }
 
-    // TODO
 	template<typename TDataType>
-    Mat4f JointTree<TDataType>::getGlobalTransform()
+    Mat4f JointTree<TDataType>::getLocalTransform()
     {
-		return Mat4f(0.0);
+        Mat4f translation = Mat4f(
+            0, 0, 0, LclTranslation[0],
+            0, 0, 0, LclTranslation[1],
+            0, 0, 0, LclTranslation[2],
+            0, 0, 0, 1);
+        
+        float P = LclRotation[1];
+        Mat4f rotation_x = Mat4f(
+            1, 0, 0, 0,
+            0, cos_angle(P), -sin_angle(P), 0,
+            0, sin_angle(P), cos_angle(P), 0,
+            0, 0, 0, 1);
+
+        float H = LclRotation[0];
+        Mat4f rotation_y = Mat4f(
+            cos_angle(H), 0, sin_angle(H), 0,
+            0, 1, 0, 0,
+            -sin_angle(H), 0, cos_angle(H), 0,
+            0, 0, 0, 1);
+
+        float B = LclRotation[2];
+        Mat4f rotation_z = Mat4f(
+            cos_angle(B), -sin_angle(B), 0, 0,
+            sin_angle(B), cos_angle(B), 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1);
+
+        Mat4f scaling= Mat4f(
+            LclScaling[0], 0, 0, 0,
+            0, LclScaling[1], 0, 0,
+            0, 0, LclScaling[2], 0,
+            0, 0, 0, 1);
+
+        return  translation * scaling * rotation_x * rotation_y * rotation_z;
+        
+    }
+    // 遍历关节层次时，顺便更新
+	template<typename TDataType>
+    void JointTree<TDataType>::getGlobalTransform()
+    {
+        // 注意顺序
+        this->GlobalTransform = getLocalTransform();
+        if(this->parent != nullptr)
+            this->GlobalTransform = this->parent->GlobalTransform * this->GlobalTransform;
     }
 
 #ifdef PRECISION_FLOAT

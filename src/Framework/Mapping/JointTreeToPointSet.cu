@@ -80,6 +80,11 @@ namespace dyno
 	template<typename TDataType>
 	bool JointTreeToPointSet<TDataType>::apply()
 	{
+		for (auto joint : *m_jointTree)
+		{
+			joint->getGlobalTransform(); // DFS 遍历
+		}
+
 		std::shared_ptr<Cluster<TDataType>> v;
 		for (int i = 0; i < this->m_clusters->size(); i++)
 		{
@@ -91,8 +96,8 @@ namespace dyno
 				v->m_weights,
 				v->m_transform,
 				v->m_transformLink,
-				// (*m_jointTree)[v->m_jointIndex]->getGlobalTransform(),
-				Mat4f(0.0),
+				(*m_jointTree)[v->m_jointIndex]->GlobalTransform,
+				// Mat4f(0.0),
 				m_from->getPoints());
 			cuSynchronize();
 		}

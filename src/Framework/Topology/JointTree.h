@@ -20,13 +20,15 @@ namespace dyno
         ~JointTree();
 
         void copyFrom(JointTree<TDataType>& jointTree);
-        Mat4f getGlobalTransform();
+        void getGlobalTransform();
+        Mat4f getLocalTransform();
         
         unsigned long long id;
         Coord PreRotation;
         Coord LclTranslation;
         Coord LclRotation;
         Coord LclScaling; 
+        Mat4f GlobalTransform;
         bool RotationActive;
         std::vector<std::shared_ptr<JointTree>> children;
         std::shared_ptr<JointTree> parent;

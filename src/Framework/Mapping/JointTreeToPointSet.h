@@ -37,7 +37,8 @@ namespace dyno
         // PointSet -> Clusters -> Joint
 		std::shared_ptr<PointSet<TDataType>> m_from = nullptr;
 		std::vector<std::shared_ptr<Cluster<TDataType>>>* m_clusters;
-		std::vector<std::shared_ptr<JointTree<TDataType>>>* m_jointTree;
+
+		std::vector<std::shared_ptr<JointTree<TDataType>>>* m_jointTree;// 顺序为DFS序
 		
 		// DArrayList<int> m_clusterIds;
 		// DArrayList<Real> m_clusterWeights;
