@@ -178,6 +178,7 @@ namespace dyno
         loadObjFile(filename_2d);
         loadTetFile(filename_3d);
 
+		this->setEdges();
         this->getJointVer();
     }
 
@@ -250,6 +251,136 @@ namespace dyno
 			m_verType,
             m_joints);
     }
+
+	template<typename EKey, typename Triangle>
+	__global__ void MS_SetupTriEdgeKeys(
+		DArray<EKey> keys,
+		DArray<int> ids,
+		DArray<Triangle> triangles)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= triangles.size()) return;
+
+		Triangle tri = triangles[tId];
+		keys[3 * tId] = EKey(tri[0], tri[1]);
+		keys[3 * tId + 1] = EKey(tri[1], tri[2]);
+		keys[3 * tId + 2] = EKey(tri[2], tri[0]);
+
+		ids[3 * tId] = tId;
+		ids[3 * tId + 1] = tId;
+		ids[3 * tId + 2] = tId;
+	}
+
+	template<typename EKey, typename Tetrahedron>
+	__global__ void MS_SetupTetEdgeKeys(
+		DArray<EKey> keys,
+		DArray<int> ids,
+		DArray<Tetrahedron> tets,
+		int num_tri)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= tets.size()) return;
+
+		Tetrahedron tet = tets[tId];
+		int nId = tId + num_tri;
+		keys[6 * nId] = EKey(tet[0], tet[1]);
+		keys[6 * nId + 1] = EKey(tet[1], tet[2]);
+		keys[6 * nId + 2] = EKey(tet[2], tet[3]);
+		keys[6 * nId + 3] = EKey(tet[3], tet[0]);
+		keys[6 * nId + 4] = EKey(tet[3], tet[1]);
+		keys[6 * nId + 5] = EKey(tet[2], tet[0]);
+
+		ids[6 * nId] = nId;
+		ids[6 * nId + 1] = nId;
+		ids[6 * nId + 2] = nId;
+		ids[6 * nId + 3] = nId;
+		ids[6 * nId + 4] = nId;
+		ids[6 * nId + 5] = nId;
+	}
+
+	template<typename EKey>
+	__global__ void MS_CountEdgeNumber(
+		DArray<int> counter,
+		DArray<EKey> keys)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= keys.size()) return;
+
+		if (tId == 0 || keys[tId] != keys[tId - 1])
+			counter[tId] = 1;
+		else
+			counter[tId] = 0;
+	}
+
+	template<typename Edge, typename EKey>
+	__global__ void MS_SetupEdges(
+		DArray<Edge> edges,
+		DArray<EKey> keys,
+		DArray<int> counter,
+		DArray<int> triIds)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= keys.size()) return;
+
+		int shift = counter[tId];
+		if (tId == 0 || keys[tId] != keys[tId - 1])
+		{
+			EKey key = keys[tId];
+			edges[shift] = Edge(key[0], key[1]);
+		}
+	}
+
+    template<typename TDataType>
+    void MixSet<TDataType>::setEdges()
+	{
+		uint triSize = m_triangles.size();
+		uint tetSize = m_tethedrons.size();
+
+		DArray<EKey> keys;
+		DArray<int> Ids;
+
+		keys.resize(3 * triSize + 6 * tetSize);
+		Ids.resize(3 * triSize + 6 * tetSize);
+
+		cuExecute(triSize,
+			MS_SetupTriEdgeKeys,
+			keys,
+			Ids,
+			m_triangles);
+
+		cuExecute(tetSize,
+			MS_SetupTetEdgeKeys,
+			keys,
+			Ids,
+			m_tethedrons,
+			triSize);
+		// 去重
+		thrust::sort_by_key(thrust::device, keys.begin(), keys.begin() + keys.size(), Ids.begin());
+
+		DArray<int> counter;
+		counter.resize(3 * triSize + 6 * tetSize);
+
+		cuExecute(keys.size(),
+			MS_CountEdgeNumber,
+			counter,
+			keys);
+
+		int edgeNum = thrust::reduce(thrust::device, counter.begin(), counter.begin() + counter.size());
+		thrust::exclusive_scan(thrust::device, counter.begin(), counter.begin() + counter.size(), counter.begin());
+
+		auto& pEdges = this->m_edges;
+		pEdges.resize(edgeNum);
+		cuExecute(keys.size(),
+			MS_SetupEdges,
+			pEdges,
+			keys,
+			counter,
+			Ids);
+
+		counter.clear();
+		Ids.clear();
+		keys.clear();
+	}
 
     template<typename TDataType>
     void MixSet<TDataType>::copyFrom(MixSet<TDataType> mixSet) 

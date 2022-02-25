@@ -29,7 +29,7 @@ namespace dyno
 		this->currentVelocity()->connect(peri->inVelocity());
 		this->currentForce()->connect(peri->inForce());
 		this->currentRestShape()->connect(peri->inRestShape());
-		this->animationPipeline()->pushModule(peri);
+		// this->animationPipeline()->pushModule(peri);
 
 		//Create a node for surface mesh rendering
 		m_surfaceNode = this->template createAncestor<Node>("Mesh");
@@ -38,12 +38,11 @@ namespace dyno
 		m_surfaceNode->currentTopology()->setDataPtr(triSet);
 
 		//Set the topology mapping from MixSet to TriangleSet
-		auto surfaceMapping = this->template addTopologyMapping<PointSetToPointSet<TDataType>>("surface_mapping");
-		// auto mixSet = TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr());
+		// auto surfaceMapping = this->template addTopologyMapping<PointSetToPointSet<TDataType>>("surface_mapping");
         auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
 
-		surfaceMapping->setFrom(ptSet);
-		surfaceMapping->setTo(triSet);        
+		// surfaceMapping->setFrom(ptSet);
+		// surfaceMapping->setTo(triSet);        
 
         // Set the Topology mapping from MixSet to joinTree
         auto jointMapping = this->template addTopologyMapping<JointTreeToPointSet<TDataType>>("joint_mapping");

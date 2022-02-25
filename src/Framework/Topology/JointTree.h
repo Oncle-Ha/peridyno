@@ -23,6 +23,7 @@ namespace dyno
         void getGlobalTransform();
         Mat4f getLocalTransform();
         
+        
         unsigned long long id;
         Coord PreRotation;
         Coord LclTranslation;

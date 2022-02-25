@@ -29,6 +29,16 @@ namespace dyno
 			std::vector<std::shared_ptr<Cluster<TDataType>>>* ,
 			std::vector<std::shared_ptr<JointTree<TDataType>>>*);
 
+	// void UpdateAnimationFor(
+	// 	DArray<int> indices,
+	// 	DArray<Real> weights,
+	// 	Mat4f Mt,
+	// 	Mat4f Mtl,
+	// 	Mat4f GlobalTransform,
+	// 	int size2d,
+	// 	int Size3d,
+	// 	DArray<Coord> points);	
+			
 	protected:
 		bool initializeImpl() override; 
 
@@ -36,6 +46,9 @@ namespace dyno
 
         // PointSet -> Clusters -> Joint
 		std::shared_ptr<PointSet<TDataType>> m_from = nullptr;
+		int m_tetPointSize = 0; 
+		int m_triPointSize = 0; 
+
 		std::vector<std::shared_ptr<Cluster<TDataType>>>* m_clusters;
 
 		std::vector<std::shared_ptr<JointTree<TDataType>>>* m_jointTree;// 顺序为DFS序

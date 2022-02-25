@@ -99,6 +99,7 @@ namespace dyno
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
         
+		typedef typename TopologyModule::Edge Edge;
 		typedef typename TopologyModule::Triangle Triangle;
 		typedef typename TopologyModule::Tetrahedron Tetrahedron;
 
@@ -131,6 +132,9 @@ namespace dyno
 
 		void setTetPoints(std::vector<Coord>& pos);
 
+		// Edge
+		void setEdges();
+
 		// Tri
 		void loadObjFile(std::string filename);
 
@@ -146,24 +150,25 @@ namespace dyno
 		void copyFrom(TetrahedronSet<TDataType> tetSet);
 
 	protected:
-		// // TODO: 改为继承PointSet
-        // std::shared_ptr<TriangleSet<TDataType>> m_triSet;       // 2D
-        // std::shared_ptr<TetrahedronSet<TDataType>> m_tetSet;    // 3D 
-
-        // std::shared_ptr<PointSet<TDataType>> m_ptSet; 		   // 2D&3D particles 
-        
+		// [		PointSet		] : m_coords, m_pointNeighbors, m_verType
+		// [		EdgeSet			] : all edge
+		// [	Triangle	]		  : non-body
+		// 			[	Tetrahedron	] : body
+		//			[ Joint ]		  
+		
+		// PointSet (2D:m_triPointSize, 3D:m_tetPointSize)
         DArray<int> m_joints;    // 2D和3D交界点的对应点 
 
-		// PointSet : m_coords  m_pointNeighbors
 		DArray<NodeType> m_verType; 
 
 		// DArrayList<TopoNumber> m_ver2Topo; 
-		// DArray<Edge> m_edges; // 不需要
 		DArray<Coord> m_triCoordsTmp;
 		DArray<Coord> m_tetCoordsTmp;
-
-		DArray<Triangle> m_triangles;
-		DArray<Tetrahedron> m_tethedrons;
+		
+		// Edge
+		DArray<Edge> m_edges;			
+		DArray<Triangle> m_triangles; 		 
+		DArray<Tetrahedron> m_tethedrons;	
 		
 		int m_tetPointSize;
 		int m_triPointSize;
