@@ -149,15 +149,17 @@ namespace dyno
 
 		void copyFrom(TetrahedronSet<TDataType> tetSet);
 
+		// Ver2T
+		void setVer2T();
 	protected:
 		// [		PointSet		] : m_coords, m_pointNeighbors, m_verType
 		// [		EdgeSet			] : all edge
 		// [	Triangle	]		  : non-body
 		// 			[	Tetrahedron	] : body
-		//			[ Joint ]		  
+		//			[ inter ]		  
 		
 		// PointSet (2D:m_triPointSize, 3D:m_tetPointSize)
-        DArray<int> m_joints;    // 2D和3D交界点的对应点 
+        DArray<int> m_intersections;    // 重合点对
 
 		DArray<NodeType> m_verType; 
 
@@ -170,6 +172,10 @@ namespace dyno
 		DArray<Triangle> m_triangles; 		 
 		DArray<Tetrahedron> m_tethedrons;	
 		
+		DArrayList<int> m_ver2Edge;
+		DArrayList<int> m_ver2Tri;
+		DArrayList<int> m_ver2Tet;
+
 		int m_tetPointSize;
 		int m_triPointSize;
 	};

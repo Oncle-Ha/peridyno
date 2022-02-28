@@ -156,7 +156,8 @@ namespace dyno
 					id_joint = cap.id_joint;
 				}
 			}
-			if (id_joint != -1) cluster[id_joint].atomicInsert(point);
+			// TODO: 改为Count+Set形式，以便节约遍历时间
+			if (id_joint != -1) {cluster[id_joint].atomicInsert(point);}
 		}
 	}
 

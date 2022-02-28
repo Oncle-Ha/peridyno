@@ -37,7 +37,9 @@ namespace dyno
 		//Searching radius
 		Real m_radius = 0.0125;
 
-		DArrayList<int> mClusters;
+		DArrayList<int> m_pointClusters;
+		DArrayList<int> m_tetClusters;
+		DArrayList<int> m_triClusters;
 		
 		JointList* m_from = nullptr;
 		// std::shared_ptr<JointTree<TDataType>> m_from = nullptr;

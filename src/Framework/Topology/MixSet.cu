@@ -180,6 +180,7 @@ namespace dyno
 
 		this->setEdges();
         this->getJointVer();
+		this->setVer2T();
     }
 
     template<typename Coord, typename FKey>
@@ -218,13 +219,76 @@ namespace dyno
         }
     }
 
+	template<typename Edge>
+	__global__ void MS_SetupVer2Edge(
+		DArray<Edge> edges,
+		DArrayList<int> ver2edge)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId > edges.size()) return ;
+		auto edge = edges[pId];
+		for(int i = 0; i < 2; ++i) 
+			ver2edge[edge[i]].atomicInsert(pId);
+	}
+
+	template<typename Triangle>
+	__global__ void MS_SetupVer2Tri(
+		DArray<Triangle> tris,
+		DArrayList<int> ver2tri)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId > tris.size()) return ;
+		auto tri = tris[pId];
+		for(int i = 0; i < 3; ++i) 
+			ver2tri[tri[i]].atomicInsert(pId);
+	}
+
+	template<typename Tetradrons>
+	__global__ void MS_SetupVer2Tet(
+		DArray<Tetradrons> tets,
+		DArrayList<int> ver2tet)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId > tets.size()) return ;
+		auto tet = tets[pId];
+		for(int i = 0; i < 4; ++i) 
+			ver2tet[tet[i]].atomicInsert(pId);
+	}	
+	
+	template<typename TDataType>
+	void MixSet<TDataType>::setVer2T()
+	{
+		uint coordSize = m_coords.size();
+		m_ver2Edge.resize(coordSize);
+		m_ver2Tri.resize(coordSize);
+		m_ver2Tet.resize(coordSize);
+
+		cuExecute(m_edges.size(),
+			MS_SetupVer2Edge,
+			m_edges,
+			m_ver2Edge);
+		cuSynchronize();
+
+		cuExecute(m_triangles.size(),
+			MS_SetupVer2Tri,
+			m_triangles,
+			m_ver2Tri);
+		cuSynchronize();
+
+		cuExecute(m_tethedrons.size(),
+			MS_SetupVer2Tet,
+			m_tethedrons,
+			m_ver2Tet);
+		cuSynchronize();
+	}
+
+
     template<typename TDataType>
     void MixSet<TDataType>::getJointVer()
     {
-    
         uint coordSize = m_coords.size();
 
-        m_joints.resize(coordSize);
+        m_intersections.resize(coordSize);
         m_verType.resize(coordSize);    
 
 		DArray<int> coordIds;
@@ -239,7 +303,7 @@ namespace dyno
             coordKeys,
             m_coords,
             m_verType,
-            m_joints,
+            m_intersections,
             m_triPointSize);
 
         thrust::sort_by_key(thrust::device, coordKeys.begin(), coordKeys.begin() + coordKeys.size(), coordIds.begin());
@@ -249,7 +313,7 @@ namespace dyno
 			coordIds,
             coordKeys,
 			m_verType,
-            m_joints);
+            m_intersections);
     }
 
 	template<typename EKey, typename Triangle>
@@ -391,8 +455,8 @@ namespace dyno
 		}
 		m_coords.assign(mixSet.m_coords);
 
-        m_joints.resize(mixSet.m_joints.size());
-        m_joints.assign(mixSet.m_joints);
+        m_intersections.resize(mixSet.m_intersections.size());
+        m_intersections.assign(mixSet.m_intersections);
 
         m_verType.resize(mixSet.m_verType.size());
         m_verType.assign(mixSet.m_verType);     
@@ -405,6 +469,10 @@ namespace dyno
 
         m_tetPointSize = mixSet.m_tetPointSize;
         m_triPointSize = mixSet.m_triPointSize;
+
+		m_ver2Edge.assign(mixSet.m_ver2Edge);
+		m_ver2Tri.assign(mixSet.m_ver2Tri);
+		m_ver2Tet.assign(mixSet.m_ver2Tet);
     }
 
     DEFINE_CLASS(MixSet);

@@ -48,9 +48,7 @@ namespace dyno
 	template<typename TDataType>
 	void CapsuleToMixSet<TDataType>::match()
 	{
-
-        //Collision among Capsule Tet Tri
-
+		// 获取胶囊体接触的顶点
 		auto nbQuery = std::make_shared<NeighborPointQueryJoint<TDataType>>();
 
 		nbQuery->inRadius()->setValue(m_radius);
@@ -82,7 +80,10 @@ namespace dyno
 
 		nbQuery->update();
 
-		mClusters.assign(nbQuery->outCluster()->getData());
+		m_pointClusters.assign(nbQuery->outCluster()->getData());
+
+		// 获取顶点所对应的几何体
+		
 	}
 
 	DEFINE_CLASS(CapsuleToMixSet);
