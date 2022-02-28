@@ -96,9 +96,9 @@ namespace dyno
 		
 		// ?
 		tmp_p = GlobalTransform * Mtl * tmp_p;
-		old_p[0] = tmp_p[0] / tmp_p[4];
-		old_p[1] = tmp_p[1] / tmp_p[4];
-		old_p[2] = tmp_p[2] / tmp_p[4];
+		old_p[0] = tmp_p[0] / tmp_p[3];
+		old_p[1] = tmp_p[1] / tmp_p[3];
+		old_p[2] = tmp_p[2] / tmp_p[3];
 
 		points[indexConvert] = old_p;
 	}

@@ -1,7 +1,7 @@
 #include "CapsuleToMixSet.h"
 
 #include "Matrix/MatrixFunc.h"
-#include "Topology/NeighborPointQuery.h"
+#include "Topology/NeighborPointQueryJoint.h"
 
 #include <iostream>
 
@@ -15,9 +15,9 @@ namespace dyno
 	}
 
 	template<typename TDataType>
-	CapsuleToMixSet<TDataType>::CapsuleToMixSet(std::shared_ptr<JointTree<TDataType>> from, std::shared_ptr<MixSet<TDataType>> to)
+	CapsuleToMixSet<TDataType>::CapsuleToMixSet(JointList* from, std::shared_ptr<MixSet<TDataType>> to)
 	{
-		m_from = from;s
+		m_from = from;
 		m_to = to;
 	}
 
@@ -31,12 +31,10 @@ namespace dyno
 	template<typename TDataType>
 	bool CapsuleToMixSet<TDataType>::initializeImpl()
 	{
-		match(m_from, m_to);
+		match();
 		return true;
 	}
 
-	//TODO: fix the problem
-	
 	template<typename TDataType>
 	bool CapsuleToMixSet<TDataType>::apply()
 	{
@@ -48,25 +46,43 @@ namespace dyno
 	}
 
 	template<typename TDataType>
-	void CapsuleToMixSet<TDataType>::match(std::shared_ptr<JointTree<TDataType>> from, std::shared_ptr<MixSet<TDataType>> to)
+	void CapsuleToMixSet<TDataType>::match()
 	{
-		m_initFrom = std::make_shared<JointTree<TDataType>>();
-		m_initTo = std::make_shared<MixSet<TDataType>>();
-
-		m_initFrom->copyFrom(*from);
-		m_initTo->copyFrom(*to);
 
         //Collision among Capsule Tet Tri
 
-		// auto nbQuery = std::make_shared<NeighborPointQuery<TDataType>>();
+		auto nbQuery = std::make_shared<NeighborPointQueryJoint<TDataType>>();
 
-		// nbQuery->inRadius()->setValue(m_radius);
-		// nbQuery->inPosition()->allocate()->assign(m_initFrom->getPoints());
-		// nbQuery->inOther()->allocate()->assign(m_initTo->getPoints());
+		nbQuery->inRadius()->setValue(m_radius);
+		nbQuery->inPosition()->allocate()->assign(m_to->getPoints());
+		nbQuery->inJointSize()->setValue(m_from->size());
+		
+		for (auto joint : *m_from)
+		{
+			joint->getGlobalTransform();
+			Vec4f tmp = joint->GlobalTransform * Vec4f(0, 0, 0, 1) ;
+			joint->GlCoord = Coord(tmp[0] / tmp[3], tmp[1] / tmp[3], tmp[2] / tmp[3]);
+		}
 
-		// nbQuery->update();
+		std::vector<JCapsule>capsule_list;
+		int id_joint = 0;
+		for (auto joint : *m_from)
+		{
+			int id_cap = 0;
+			for (auto joint_son : joint->children)
+			{
+				capsule_list.push_back(JCapsule{id_joint, id_cap, 
+												joint->GlCoord, joint_son->GlCoord});
+				++id_cap;
+			}
+			++id_joint;
+		}
 
-		// mNeighborIds.assign(nbQuery->outNeighborIds()->getData());
+		nbQuery->inCapsule()->allocate()->assign(capsule_list);
+
+		nbQuery->update();
+
+		mClusters.assign(nbQuery->outCluster()->getData());
 	}
 
 	DEFINE_CLASS(CapsuleToMixSet);

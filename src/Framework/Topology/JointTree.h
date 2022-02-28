@@ -3,6 +3,20 @@
 
 namespace dyno
 {
+
+    struct JCapsule
+    {
+        typedef typename DataType3f::Coord Coord;
+        int id_joint;
+        int id_cap;
+        Coord v0,v1;
+
+        DYN_FUNC JCapsule(){};
+        DYN_FUNC JCapsule(int id1, int id2, Coord a0, Coord a1): 
+        id_joint(id1), id_cap(id2), v0(a0), v1(a1){};
+        DYN_FUNC ~JCapsule(){};
+    };
+
     /*!
 	*	\class	JointTree
 	*	\brief	A JointTree(Skeleton) represents a hierarchical tree structure of joints
@@ -16,17 +30,12 @@ namespace dyno
 		typedef typename TDataType::Coord Coord;
 		typedef typename TDataType::Matrix Matrix;
 
-        struct JCapsule
-        {
-            int id_joint;
-            int id_cap;
-            Coord v0,v1;
-        };
         
         JointTree();
         ~JointTree();
 
-        void copyFrom(JointTree<TDataType>& jointTree);
+        void copyFrom(JointTree<TDataType> jointTree);
+
         void getGlobalTransform();
         Mat4f getLocalTransform();
         

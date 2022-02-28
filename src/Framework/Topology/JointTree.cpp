@@ -135,6 +135,21 @@ namespace dyno
             this->GlobalTransform = this->parent->GlobalTransform * this->GlobalTransform;
     }
 
+
+    template<typename TDataType>
+    void JointTree<TDataType>::copyFrom(JointTree<TDataType> jointTree)
+    {
+        this->id = jointTree.id;
+        this->PreRotation = jointTree.PreRotation;
+        this->LclTranslation = jointTree.LclTranslation;
+        this->LclRotation = jointTree.LclRotation;
+        this->LclScaling = jointTree.LclScaling;
+        this->GlCoord = jointTree.GlCoord;
+        this->GlobalTransform = jointTree.GlobalTransform;
+        this->RotationActive = jointTree.RotationActive;
+        this->children.assign(jointTree.children.begin(), jointTree.children.end());
+        this->parent = jointTree.parent;
+    }
 #ifdef PRECISION_FLOAT
 	template class JointTree<DataType3f>;
 #else

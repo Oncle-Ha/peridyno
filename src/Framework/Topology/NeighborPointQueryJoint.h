@@ -4,7 +4,7 @@
 
 namespace dyno 
 {
-	// return Number of Joint near Point
+	// return Point near Joint 
 	template<typename TDataType>
 	class NeighborPointQueryJoint : public ComputeModule
 	{
@@ -12,7 +12,7 @@ namespace dyno
 	public:
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
-
+		
 		NeighborPointQueryJoint();
 		~NeighborPointQueryJoint() override;
 		
@@ -32,6 +32,11 @@ namespace dyno
 		DEF_VAR_IN(Real, Radius, "Capsules radius");
 
 		/**
+		* @brief The number of joints
+		*/
+		DEF_VAR_IN(int, JointSize, "The number of joints");
+
+		/**
 		 * @brief A set of points to be required from.
 		 */
 		DEF_ARRAY_IN(Coord, Position, DeviceType::GPU, "A set of points to be required from");
@@ -39,11 +44,11 @@ namespace dyno
 		/**
 		 * @brief A set of Capsules from JointTree.
 		 */
-		DEF_ARRAY_IN(JointTree::JCapsule, Capsule, DeviceType::GPU, "A set of Capsules from JointTree.");
+		DEF_ARRAY_IN(JCapsule, Capsule, DeviceType::GPU, "A set of Capsules from JointTree.");
 		
 		/**
-		 * @brief Joint ids
+		 * @brief Point ids near Joint 
 		 */
-		DEF_ARRAY_OUT(int, JointIds, DeviceType::GPU, "Return Joint ids");
+		DEF_ARRAYLIST_OUT(int, Cluster, DeviceType::GPU, "Return Point ids ");
 	};
 }
