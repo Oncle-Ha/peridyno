@@ -45,8 +45,8 @@ namespace dyno
 		// surfaceMapping->setTo(triSet);        
 
         // Set the Topology mapping from MixSet to joinTree
-        auto jointMapping = this->template addTopologyMapping<JointTreeToPointSet<TDataType>>("joint_mapping");
-        jointMapping->set(ptSet, &m_clusters, &m_jointMap);
+        // auto jointMapping = this->template addTopologyMapping<JointTreeToPointSet<TDataType>>("joint_mapping");
+        // jointMapping->set(ptSet, &m_clusters, &m_jointMap);
 
     }
 

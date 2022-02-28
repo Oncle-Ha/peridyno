@@ -3,7 +3,7 @@
 
 namespace dyno
 {
-	/*!
+    /*!
 	*	\class	JointTree
 	*	\brief	A JointTree(Skeleton) represents a hierarchical tree structure of joints
 	*/    
@@ -16,6 +16,13 @@ namespace dyno
 		typedef typename TDataType::Coord Coord;
 		typedef typename TDataType::Matrix Matrix;
 
+        struct JCapsule
+        {
+            int id_joint;
+            int id_cap;
+            Coord v0,v1;
+        };
+        
         JointTree();
         ~JointTree();
 
@@ -26,9 +33,10 @@ namespace dyno
         
         unsigned long long id;
         Coord PreRotation;
-        Coord LclTranslation;
+        Coord LclTranslation;   // Local Joint's coord
         Coord LclRotation;
         Coord LclScaling; 
+        Coord GlCoord;          // Global Joint's coord 
         Mat4f GlobalTransform;
         bool RotationActive;
         std::vector<std::shared_ptr<JointTree>> children;
