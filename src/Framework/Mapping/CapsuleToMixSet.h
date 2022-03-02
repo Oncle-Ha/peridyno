@@ -14,6 +14,8 @@ namespace dyno
 	public:
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
+		typedef typename TopologyModule::Pair2 Pair2;
+		typedef typename TopologyModule::Pair3 Pair3;
 		typedef std::vector<std::shared_ptr<JointTree<typename TDataType>>> JointList;
 
 		CapsuleToMixSet();
@@ -34,16 +36,22 @@ namespace dyno
 		bool initializeImpl() override;
 
 	private:
+		Reduction<int> m_reduce;
+		Scan m_scan;
+
 		//Searching radius
 		Real m_radius = 0.0125;
 
-		DArrayList<int> m_pointClusters;
-		DArrayList<int> m_tetClusters;
-		DArrayList<int> m_triClusters;
+	
+		//映射关系
+		DArray<Pair2> m_tetClusters; 
+		DArray<Pair2> m_triClusters;
 		
 		JointList* m_from = nullptr;
 		// std::shared_ptr<JointTree<TDataType>> m_from = nullptr;
 		std::shared_ptr<MixSet<TDataType>> m_to = nullptr;
+		
+		std::vector<Mat4f> m_initInvTransform; // X2 = M2 M1^-1 X1
 
 		// JointList* m_initfrom = nullptr;
 		// std::shared_ptr<JointTree<TDataType>> m_initFrom = nullptr;

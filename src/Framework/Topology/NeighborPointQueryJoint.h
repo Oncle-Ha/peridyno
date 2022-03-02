@@ -12,16 +12,16 @@ namespace dyno
 	public:
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
-		
+		typedef typename TopologyModule::Pair2 Pair2;
+
 		NeighborPointQueryJoint();
 		~NeighborPointQueryJoint() override;
 		
 		void compute() override;
 
 	private:
-		void requestDynamicNeighborIds();
-
-		void requestFixedSizeNeighborIds();
+		Reduction<int> m_reduce;
+		Scan m_scan;
 
 	public:
 		// DEF_VAR(uint, SizeLimit, 0, "Maximum number of neighbors");
@@ -34,7 +34,7 @@ namespace dyno
 		/**
 		* @brief The number of joints
 		*/
-		DEF_VAR_IN(int, JointSize, "The number of joints");
+		// DEF_VAR_IN(int, JointSize, "The number of joints");
 
 		/**
 		 * @brief A set of points to be required from.
@@ -47,8 +47,8 @@ namespace dyno
 		DEF_ARRAY_IN(JCapsule, Capsule, DeviceType::GPU, "A set of Capsules from JointTree.");
 		
 		/**
-		 * @brief Point ids near Joint 
+		 * @brief <Joint, Point near Joint>
 		 */
-		DEF_ARRAYLIST_OUT(int, Cluster, DeviceType::GPU, "Return Point ids ");
+		DEF_ARRAY_OUT(Pair2, PJPair, DeviceType::GPU, "Return <Joint, Point near Joint>.");
 	};
 }

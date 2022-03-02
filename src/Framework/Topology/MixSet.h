@@ -120,7 +120,12 @@ namespace dyno
 
 		// return DArray Tri, Tet
 		DArray<Triangle>& getTriangles() { return m_triangles; }
-		DArray<Tetrahedron>& getTetrahedrons() { return m_tethedrons; }
+		DArray<Tetrahedron>& getTetrahedrons() { return m_tetrahedron; }
+
+		// return DArrayList Ver2
+		DArrayList<int>& getVer2Edge() {return m_ver2Edge;}
+		DArrayList<int>& getVer2Tri() {return m_ver2Tri;}
+		DArrayList<int>& getVer2Tet() {return m_ver2Tet;}
 
         // get joint between 2D & 3D
         void getJointVer();
@@ -170,7 +175,7 @@ namespace dyno
 		// Edge
 		DArray<Edge> m_edges;			
 		DArray<Triangle> m_triangles; 		 
-		DArray<Tetrahedron> m_tethedrons;	
+		DArray<Tetrahedron> m_tetrahedron;
 		
 		DArrayList<int> m_ver2Edge;
 		DArrayList<int> m_ver2Tri;

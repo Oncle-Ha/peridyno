@@ -44,20 +44,17 @@ bool init(const char* filepath)
 }
 
 
-void copyVec(DataType3f::Coord &dest, ofbx::Vec3 src)
-{
-	dest[0] = src.x;
-	dest[1] = src.x;
-	dest[2] = src.y;
-}
+void copyVec(DataType3f::Coord &dest, ofbx::Vec3 src){dest = DataType3f::Coord(src.x, src.y, src.z);}
+void copyVecR(DataType3f::Coord &dest, ofbx::Vec3 src){dest = DataType3f::Coord(src.x, -src.y, -src.z);}
+void copyVecT(DataType3f::Coord &dest, ofbx::Vec3 src){dest = DataType3f::Coord(src.x, src.y, -src.z);}
 
 void getModelProperties(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3f>> cur)
 {
 	cur->id = object.id;
 
 	copyVec(cur->PreRotation, object.getPreRotation());
-	copyVec(cur->LclTranslation, object.getLocalTranslation());
-	copyVec(cur->LclRotation, object.getLocalRotation());
+	copyVecT(cur->LclTranslation, object.getLocalTranslation());
+	copyVecR(cur->LclRotation, object.getLocalRotation());
 	copyVec(cur->LclScaling, object.getLocalScaling());
 
 	temp_Dolphin->m_jointMap.push_back(cur);
@@ -132,7 +129,7 @@ void getNodes(const ofbx::IScene& scene)
 			++i;
 		}			
 	}
-	getCluster(*root);
+	// getCluster(*root);
 }
 
 void loadFBX(const char* filepath)
@@ -140,7 +137,6 @@ void loadFBX(const char* filepath)
 	init(filepath);
 	getNodes(*g_scene);
 }
-
 
 int main()
 {
@@ -161,6 +157,7 @@ int main()
 	dolphin->loadMixFile("../../data/dolphin/Dolphin");
 	loadFBX("../../data/dolphin/Dolphin_Particles.fbx");
 
+	// 顺序：缩放，平移
 	dolphin->scale(0.2f); // 太大会导致粒子间距过大以至于邻居为空
 	dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
 	dolphin->setVisible(true);

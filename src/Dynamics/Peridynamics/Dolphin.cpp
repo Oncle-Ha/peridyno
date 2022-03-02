@@ -4,7 +4,7 @@
 #include "Topology/PointSet.h"
 #include "Topology/MixSet.h"
 #include "Mapping/PointSetToPointSet.h"
-#include "Mapping/JointTreeToPointSet.h"
+#include "Mapping/CapsuleToMixSet.h"
 #include "Topology/NeighborPointQuery.h"
 #include "Peridynamics/Peridynamics.h"
 #include "SharedFunc.h"
@@ -17,6 +17,7 @@ namespace dyno
     Dolphin<TDataType>::Dolphin(std::string name)
         :ParticleSystem<TDataType>(name)
     {
+
         auto mixSet = std::make_shared<MixSet<TDataType>>();
 		this->currentTopology()->setDataPtr(mixSet);
         // this->currentPoints()->setDataPtr(mixSet->getPointSet());
@@ -44,9 +45,11 @@ namespace dyno
 		// surfaceMapping->setFrom(ptSet);
 		// surfaceMapping->setTo(triSet);        
 
-        // Set the Topology mapping from MixSet to joinTree
-        // auto jointMapping = this->template addTopologyMapping<JointTreeToPointSet<TDataType>>("joint_mapping");
-        // jointMapping->set(ptSet, &m_clusters, &m_jointMap);
+        // Set the Topology mapping from Capsule(JointTree) to MixSet 
+        auto jointMapping = this->template addTopologyMapping<CapsuleToMixSet<TDataType>>("joint_mapping");
+        jointMapping->setFrom(&m_jointMap);
+        jointMapping->setTo(mixSet);
+        jointMapping->setCapsuleRadius(0.0125);
 
     }
 
@@ -61,6 +64,7 @@ namespace dyno
     {
         TypeInfo::cast<TriangleSet<TDataType>>(m_surfaceNode->currentTopology()->getDataPtr())->scale(s);
         TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr())->scale(s);
+        m_jointMap[0]->scale(s); // Root
 
         return true;
     }
@@ -70,6 +74,7 @@ namespace dyno
     {
         TypeInfo::cast<TriangleSet<TDataType>>(m_surfaceNode->currentTopology()->getDataPtr())->translate(t);
         TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr())->translate(t);
+        m_jointMap[0]->translate(t); // Root
 
         return true;
     }

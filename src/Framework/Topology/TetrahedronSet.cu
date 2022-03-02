@@ -24,8 +24,8 @@ namespace dyno
 	{
 		std::vector<Triangle> triangles;
 
-		m_tethedrons.resize(tetrahedrons.size());
-		m_tethedrons.assign(tetrahedrons);
+		m_tetrahedron.resize(tetrahedrons.size());
+		m_tetrahedron.assign(tetrahedrons);
 
 		this->updateTriangles();
 	}
@@ -33,12 +33,12 @@ namespace dyno
 	template<typename TDataType>
 	void TetrahedronSet<TDataType>::setTetrahedrons(DArray<Tetrahedron>& tetrahedrons)
 	{
-		if (tetrahedrons.size() != m_tethedrons.size())
+		if (tetrahedrons.size() != m_tetrahedron.size())
 		{
-			m_tethedrons.resize(tetrahedrons.size());
+			m_tetrahedron.resize(tetrahedrons.size());
 		}
 
-		m_tethedrons.assign(tetrahedrons);
+		m_tetrahedron.assign(tetrahedrons);
 
 		this->updateTriangles();
 	}
@@ -145,18 +145,18 @@ namespace dyno
 		counter.resize(m_coords.size());
 		counter.reset();
 
-		cuExecute(m_tethedrons.size(),
+		cuExecute(m_tetrahedron.size(),
 			TS_CountTets,
 			counter,
-			m_tethedrons);
+			m_tetrahedron);
 
 		m_ver2Tet.resize(counter);
 
 		counter.reset();
-		cuExecute(m_tethedrons.size(),
+		cuExecute(m_tetrahedron.size(),
 			TS_SetupTetIds,
 			m_ver2Tet,
-			m_tethedrons);
+			m_tetrahedron);
 
 		counter.clear();
 
@@ -263,7 +263,7 @@ namespace dyno
 	template<typename TDataType>
 	void TetrahedronSet<TDataType>::updateTriangles()
 	{
-		uint tetSize = m_tethedrons.size();
+		uint tetSize = m_tetrahedron.size();
 
 		DArray<TKey> keys;
 		DArray<int> tetIds;
@@ -275,7 +275,7 @@ namespace dyno
 			TS_SetupKeys,
 			keys,
 			tetIds,
-			m_tethedrons);
+			m_tetrahedron);
 
 		thrust::sort_by_key(thrust::device, keys.begin(), keys.begin() + keys.size(), tetIds.begin());
 
@@ -313,8 +313,8 @@ namespace dyno
 	template<typename TDataType>
 	void TetrahedronSet<TDataType>::copyFrom(TetrahedronSet<TDataType> tetSet)
 	{
-		m_tethedrons.resize(tetSet.m_tethedrons.size());
-		m_tethedrons.assign(tetSet.m_tethedrons);
+		m_tetrahedron.resize(tetSet.m_tetrahedron.size());
+		m_tetrahedron.assign(tetSet.m_tetrahedron);
 
 		tri2Tet.resize(tetSet.tri2Tet.size());
 		tri2Tet.assign(tetSet.tri2Tet);

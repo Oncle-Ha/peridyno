@@ -36,12 +36,18 @@ namespace dyno
 
         void copyFrom(JointTree<TDataType> jointTree);
 
+        void scale(Real s);
+        void translate(Coord t);
         void getGlobalTransform();
-        Mat4f getLocalTransform();
+        Mat4f getTransform(Coord & T, Coord& R, Coord& S);
         
         
         unsigned long long id;
+        // 用于对整个模型进行调整
         Coord PreRotation;
+        Coord PreScaling;
+		Coord PreTranslation;
+
         Coord LclTranslation;   // Local Joint's coord
         Coord LclRotation;
         Coord LclScaling; 
@@ -50,5 +56,6 @@ namespace dyno
         bool RotationActive;
         std::vector<std::shared_ptr<JointTree>> children;
         std::shared_ptr<JointTree> parent;
+		
     };
 }

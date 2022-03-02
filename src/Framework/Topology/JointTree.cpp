@@ -1,22 +1,25 @@
 #pragma once
 #include "JointTree.h"
 
-#define cos_angle(angle) cos(angle / 180.0f * 3.1415926)
-#define sin_angle(angle) sin(angle / 180.0f * 3.1415926)
+#define cos_angle(angle) cos(double(angle * 3.1415926f / 180.0))
+#define sin_angle(angle) sin(double(angle * 3.1415926f / 180.0))
 
 namespace dyno
 {
     IMPLEMENT_CLASS_1(JointTree, TDataType)
-
+    
     template<typename TDataType>
     JointTree<TDataType>::JointTree()
     {
         id = -1;
         RotationActive = true;
         PreRotation = Coord(0);
+        PreTranslation = Coord(0);
+        PreScaling = Coord(1);
+
         LclTranslation = Coord(0);
         LclRotation = Coord(0);
-        LclScaling = Coord(0);
+        LclScaling = Coord(1);
     }
     
     template<typename TDataType>
@@ -87,52 +90,56 @@ namespace dyno
     // }
 
 	template<typename TDataType>
-    Mat4f JointTree<TDataType>::getLocalTransform()
+    Mat4f JointTree<TDataType>::getTransform(Coord & T, Coord& R, Coord& S)
     {
+		// FIXME
         Mat4f translation = Mat4f(
-            0, 0, 0, LclTranslation[0],
-            0, 0, 0, LclTranslation[1],
-            0, 0, 0, LclTranslation[2],
+            1, 0, 0, T[0],
+            0, 1, 0, T[1],
+            0, 0, 1, T[2],
             0, 0, 0, 1);
         
-        float P = LclRotation[1];
+        double X = R[0];
         Mat4f rotation_x = Mat4f(
             1, 0, 0, 0,
-            0, cos_angle(P), -sin_angle(P), 0,
-            0, sin_angle(P), cos_angle(P), 0,
+            0, cos_angle(X), -sin_angle(X), 0,
+            0, sin_angle(X), cos_angle(X), 0,
             0, 0, 0, 1);
 
-        float H = LclRotation[0];
+		double Y = R[1];
         Mat4f rotation_y = Mat4f(
-            cos_angle(H), 0, sin_angle(H), 0,
+            cos_angle(Y), 0, sin_angle(Y), 0,
             0, 1, 0, 0,
-            -sin_angle(H), 0, cos_angle(H), 0,
+            -sin_angle(Y), 0, cos_angle(Y), 0,
             0, 0, 0, 1);
 
-        float B = LclRotation[2];
+		double Z = R[2];
         Mat4f rotation_z = Mat4f(
-            cos_angle(B), -sin_angle(B), 0, 0,
-            sin_angle(B), cos_angle(B), 0, 0,
+            cos_angle(Z), -sin_angle(Z), 0, 0,
+            sin_angle(Z), cos_angle(Z), 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 1);
 
         Mat4f scaling= Mat4f(
-            LclScaling[0], 0, 0, 0,
-            0, LclScaling[1], 0, 0,
-            0, 0, LclScaling[2], 0,
+            S[0], 0, 0, 0,
+            0, S[1], 0, 0,
+            0, 0, S[2], 0,
             0, 0, 0, 1);
 
         return  translation * scaling * rotation_x * rotation_y * rotation_z;
-        
     }
+
+	// FIXME 存在问题：X*getLocalTransform=X
     // 遍历关节层次时，顺便更新
 	template<typename TDataType>
     void JointTree<TDataType>::getGlobalTransform()
     {
         // 注意顺序
-        this->GlobalTransform = getLocalTransform();
+        this->GlobalTransform = getTransform(this->LclTranslation, this->LclScaling, this->LclScaling);
         if(this->parent != nullptr)
             this->GlobalTransform = this->parent->GlobalTransform * this->GlobalTransform;
+        else
+            this->GlobalTransform = getTransform(this->PreTranslation, this->PreRotation, this->PreScaling) * this->GlobalTransform;
     }
 
 
@@ -150,6 +157,19 @@ namespace dyno
         this->children.assign(jointTree.children.begin(), jointTree.children.end());
         this->parent = jointTree.parent;
     }
+
+    template<typename TDataType>
+    void JointTree<TDataType>::scale(Real s)
+    {
+		PreScaling *= s;
+    }
+
+    template<typename TDataType>
+    void JointTree<TDataType>::translate(Coord t)
+    {
+        PreTranslation += t;
+    }
+    
 #ifdef PRECISION_FLOAT
 	template class JointTree<DataType3f>;
 #else

@@ -20,7 +20,7 @@ namespace dyno
 		void setTetrahedrons(std::vector<Tetrahedron>& tetrahedrons);
 		void setTetrahedrons(DArray<Tetrahedron>& tetrahedrons);
 
-		DArray<Tetrahedron>& getTetrahedrons() { return m_tethedrons; }
+		DArray<Tetrahedron>& getTetrahedrons() { return m_tetrahedron; }
 		DArray<Tri2Tet>& getTri2Tet() { return tri2Tet; }
 
 		DArrayList<int>& getVer2Tet();
@@ -32,7 +32,7 @@ namespace dyno
 		void copyFrom(TetrahedronSet<TDataType> tetSet);
 
 	protected:
-		DArray<Tetrahedron> m_tethedrons;
+		DArray<Tetrahedron> m_tetrahedron;
 
 	private:
 		DArray<Tri2Tet> tri2Tet;

@@ -47,6 +47,7 @@ namespace dyno
 	{
 	}
 
+	// max_cap {O(Gird*Point)}
 	// 寻找关节所延伸胶囊体控制的顶点
 	template<typename Coord, typename JCapsule, typename TDataType>
 	__global__ void K_ComputeNeighbor(
@@ -54,9 +55,9 @@ namespace dyno
 		GridHash<TDataType> hash, 
 		Real h,
 		DArray<JCapsule> caps,
-		DArrayList<int> pointIds, 
-		DArrayList<int> capIds,
-		DArrayList<Real> capdis)  
+		DArrayList<int> pointIds,  // cap:[points..]
+		DArrayList<int> capIds,	   // point:[caps..]
+		DArrayList<Real> capdis)   // point:[dis..]
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= caps.size()) return;
@@ -73,7 +74,12 @@ namespace dyno
 		int3 vId = vId0;
 		while(true)
 		{	
+			//DEBUG
+
 			int gId = hash.getIndex(vId.x, vId.y, vId.z);
+			printf("Gird: %d, Pid: %d\n", gId, pId);
+			if (gId == -1) break;
+
 			int totalNum = hash.getCounter(gId);
 			for (int i = 0; i < totalNum; i++) {
 				int nbId = hash.getParticleId(gId, i);
@@ -91,6 +97,7 @@ namespace dyno
 			}
 
 			// 选取线段上最近Grid
+			//FIXME: 选取不正确
 			float next_t = -1;
 			int3 next_c;
 			for (int c = 1; c < 27; c++)
@@ -112,6 +119,8 @@ namespace dyno
 					{
 						next_t = mint;
 						next_c = cId;
+						//DEBUG
+						//if (cId == vId) printf("Error cId == vId\n");
 					}
 				}
 			}
@@ -122,20 +131,33 @@ namespace dyno
 		}
 	}
 
+	// max_cap {O(Gird*Point)}
+	// 统计<顶点，关节>点对
+	__global__ void K_CountPair(
+		DArrayList<int> pointIds,
+		DArray<int> count)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= count.size()) return;
 
-	// 确定每个顶点所属关节
-	template<typename Coord, typename JCapsule>
-	__global__ void K_ComputeJoint(	
-		DArray<Coord> position, 
-		Real h,
+		count[pId] = pointIds[pId].size();
+		//if (count[pId] < 0) printf("Error <0\n");
+		//if (count[pId] == 0) printf("Error =0 %d\n", pId);
+	}
+
+	// max_cap {O(Gird*Point)}
+	// 存储<顶点，关节>点对
+	template<typename JCapsule, typename Pair2>
+	__global__ void K_SetPair(
 		DArray<JCapsule> caps,
 		DArrayList<int> pointIds,
 		DArrayList<int> capIds,
 		DArrayList<Real> capdis,
-		DArrayList<int> cluster)
+		DArray<int> count,
+		DArray<Pair2> pairs)
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
-		if (pId > caps.size()) return;
+		if (pId >= caps.size()) return;
 
 		auto& ptIds = pointIds[pId];
 		int size_i = ptIds.size();
@@ -156,8 +178,10 @@ namespace dyno
 					id_joint = cap.id_joint;
 				}
 			}
-			// TODO: 改为Count+Set形式，以便节约遍历时间
-			if (id_joint != -1) {cluster[id_joint].atomicInsert(point);}
+			if (id_joint != -1)  // assert(id_joint != -1)
+			{
+				pairs[count[pId] + i] = Pair2(id_joint, point);
+			}
 		}
 	}
 
@@ -170,16 +194,14 @@ namespace dyno
 		auto h			= this->inRadius()->getData();
 
 		// Prepare outputs
-		if (this->outCluster()->isEmpty())
-			this->outCluster()->allocate();
+		if (this->outPJPair()->isEmpty())
+			this->outPJPair()->allocate();
 
-		auto& clusters = this->outCluster()->getData();
+		auto& pairs = this->outPJPair()->getData();
 
-		uint numJt  = this->inJointSize()->getData();
+		// uint numJt  = this->inJointSize()->getData();
 		uint numPt  = this->inPosition()->getDataPtr()->size();
 		uint numCp  = this->inCapsule()->getDataPtr()->size();
-
-		clusters.resize(numJt);
 
 		// Construct hash grid
 		Reduction<Coord> reduce;
@@ -194,10 +216,13 @@ namespace dyno
 		DArrayList<int> pointIds;
 		DArrayList<int> capIds;
 		DArrayList<Real> capdis;
+		DArray<int> count;
+		
 		pointIds.resize(numCp);
 		capIds.resize(numPt);
 		capdis.resize(numPt); // TODO: 待优化空间
-
+		count.resize(numCp);
+		// FIXME 无输出
 		cuExecute(numCp,
 			K_ComputeNeighbor,
 			points,
@@ -209,17 +234,33 @@ namespace dyno
 			capdis);
 		cuSynchronize();
 
+		// BUGXX
+		int ppp = pointIds.elementSize();
+		int ppp2 = capIds.elementSize();
+		int ppp3 = capdis.elementSize();
+		// std::cerr << pointIds.elementSize() << std::endl;
+
 		cuExecute(numCp,
-			K_ComputeJoint,
-			points,
-			h,
+			K_CountPair,
+			pointIds,
+			count);
+		cuSynchronize();
+	
+		int numPr = m_reduce.accumulate(count.begin(), count.size());
+		m_scan.exclusive(count, true);
+		pairs.resize(numPr);
+
+		cuExecute(numCp,
+			K_SetPair,
 			capsules,
 			pointIds,
 			capIds,
 			capdis,
-			clusters);
+			count,
+			pairs);
 		cuSynchronize();
 
+		count.clear();
 		pointIds.clear();
 		capIds.clear();
 		capdis.clear();

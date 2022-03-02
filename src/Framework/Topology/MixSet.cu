@@ -63,8 +63,8 @@ namespace dyno
 	template<typename TDataType>
 	void MixSet<TDataType>::setTetrahedrons(std::vector<Tetrahedron>& tetrahedrons)
 	{
-		m_tethedrons.resize(tetrahedrons.size());
-		m_tethedrons.assign(tetrahedrons);
+		m_tetrahedron.resize(tetrahedrons.size());
+		m_tetrahedron.assign(tetrahedrons);
 	}
 
     template<typename TDataType>
@@ -158,10 +158,14 @@ namespace dyno
 			int id;
 			Tetrahedron tet;
 			data >> id >> tet[0] >> tet[1] >> tet[2] >> tet[3];
-			tet[0] -= 1;
-			tet[1] -= 1;
-			tet[2] -= 1;
-			tet[3] -= 1;
+			tet[0] += m_triPointSize - 1;
+			tet[1] += m_triPointSize - 1;
+			tet[2] += m_triPointSize - 1;
+			tet[3] += m_triPointSize - 1;
+			// tet[0] -= 1;
+			// tet[1] -= 1;
+			// tet[2] -= 1;
+			// tet[3] -= 1;
 			tets.push_back(tet);
 		}
 
@@ -225,7 +229,7 @@ namespace dyno
 		DArrayList<int> ver2edge)
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
-		if (pId > edges.size()) return ;
+		if (pId >= edges.size()) return ;
 		auto edge = edges[pId];
 		for(int i = 0; i < 2; ++i) 
 			ver2edge[edge[i]].atomicInsert(pId);
@@ -237,7 +241,7 @@ namespace dyno
 		DArrayList<int> ver2tri)
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
-		if (pId > tris.size()) return ;
+		if (pId >= tris.size()) return ;
 		auto tri = tris[pId];
 		for(int i = 0; i < 3; ++i) 
 			ver2tri[tri[i]].atomicInsert(pId);
@@ -249,7 +253,7 @@ namespace dyno
 		DArrayList<int> ver2tet)
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
-		if (pId > tets.size()) return ;
+		if (pId >= tets.size()) return ;
 		auto tet = tets[pId];
 		for(int i = 0; i < 4; ++i) 
 			ver2tet[tet[i]].atomicInsert(pId);
@@ -275,9 +279,9 @@ namespace dyno
 			m_ver2Tri);
 		cuSynchronize();
 
-		cuExecute(m_tethedrons.size(),
+		cuExecute(m_tetrahedron.size(),
 			MS_SetupVer2Tet,
-			m_tethedrons,
+			m_tetrahedron,
 			m_ver2Tet);
 		cuSynchronize();
 	}
@@ -346,20 +350,20 @@ namespace dyno
 		if (tId >= tets.size()) return;
 
 		Tetrahedron tet = tets[tId];
-		int nId = tId + num_tri;
-		keys[6 * nId] = EKey(tet[0], tet[1]);
-		keys[6 * nId + 1] = EKey(tet[1], tet[2]);
-		keys[6 * nId + 2] = EKey(tet[2], tet[3]);
-		keys[6 * nId + 3] = EKey(tet[3], tet[0]);
-		keys[6 * nId + 4] = EKey(tet[3], tet[1]);
-		keys[6 * nId + 5] = EKey(tet[2], tet[0]);
+		int nId = 6 * tId + 3 * num_tri;
+		keys[nId] = EKey(tet[0], tet[1]);
+		keys[nId + 1] = EKey(tet[1], tet[2]);
+		keys[nId + 2] = EKey(tet[2], tet[3]);
+		keys[nId + 3] = EKey(tet[3], tet[0]);
+		keys[nId + 4] = EKey(tet[3], tet[1]);
+		keys[nId + 5] = EKey(tet[2], tet[0]);
 
-		ids[6 * nId] = nId;
-		ids[6 * nId + 1] = nId;
-		ids[6 * nId + 2] = nId;
-		ids[6 * nId + 3] = nId;
-		ids[6 * nId + 4] = nId;
-		ids[6 * nId + 5] = nId;
+		ids[nId] = nId;
+		ids[nId + 1] = nId;
+		ids[nId + 2] = nId;
+		ids[nId + 3] = nId;
+		ids[nId + 4] = nId;
+		ids[nId + 5] = nId;
 	}
 
 	template<typename EKey>
@@ -398,7 +402,7 @@ namespace dyno
     void MixSet<TDataType>::setEdges()
 	{
 		uint triSize = m_triangles.size();
-		uint tetSize = m_tethedrons.size();
+		uint tetSize = m_tetrahedron.size();
 
 		DArray<EKey> keys;
 		DArray<int> Ids;
@@ -416,7 +420,7 @@ namespace dyno
 			MS_SetupTetEdgeKeys,
 			keys,
 			Ids,
-			m_tethedrons,
+			m_tetrahedron,
 			triSize);
 		// 去重
 		thrust::sort_by_key(thrust::device, keys.begin(), keys.begin() + keys.size(), Ids.begin());
@@ -464,8 +468,8 @@ namespace dyno
         m_triangles.resize(mixSet.m_triangles.size());
         m_triangles.assign(mixSet.m_triangles);   
 
-        m_tethedrons.resize(mixSet.m_tethedrons.size());
-        m_tethedrons.assign(mixSet.m_tethedrons);   
+        m_tetrahedron.resize(mixSet.m_tetrahedron.size());
+        m_tetrahedron.assign(mixSet.m_tetrahedron);   
 
         m_tetPointSize = mixSet.m_tetPointSize;
         m_triPointSize = mixSet.m_triPointSize;
