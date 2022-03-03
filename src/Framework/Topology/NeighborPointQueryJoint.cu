@@ -1,5 +1,6 @@
 #include "NeighborPointQueryJoint.h"
 #include "Topology/GridHash.h"
+#include <thrust/sort.h>
 
 namespace dyno
 {
@@ -48,58 +49,68 @@ namespace dyno
 	}
 
 	// max_cap {O(Gird*Point)}
-	// 寻找关节所延伸胶囊体控制的顶点
+	// count<顶点, 距离, 关节>对
 	template<typename Coord, typename JCapsule, typename TDataType>
-	__global__ void K_ComputeNeighbor(
+	__global__ void K_CountNeighbor(
 		DArray<Coord> position, 
 		GridHash<TDataType> hash, 
 		Real h,
 		DArray<JCapsule> caps,
-		DArrayList<int> pointIds,  // cap:[points..]
-		DArrayList<int> capIds,	   // point:[caps..]
-		DArrayList<Real> capdis)   // point:[dis..]
+		DArray<int> count)  // cap:[<>..]
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= caps.size()) return;
 		
+		count[pId] = 0;
 		JCapsule cap = caps[pId];
 		int3 vId0 = hash.getIndex3(cap.v0);
 		int3 vId1 = hash.getIndex3(cap.v1);
 		
+		//DEBUG 
+		// printf("[(%d,%d,%d)->(%d,%d,%d)] pId:%d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
+
 		Coord m = cap.v0;
 		Coord s = (cap.v1 - cap.v0);
 		Real d = s.norm();
 
 		// 遍历线段所覆盖的Grid
 		int3 vId = vId0;
+		
+		// 线段与立方体求交
+		Coord max_v = hash.getMax3(vId);
+		Coord max_t = (max_v - m) / s;
+		float next_t = min(max_t[0], min(max_t[1], max_t[2])); //边界时间段
 		while(true)
 		{	
-			//DEBUG
-
 			int gId = hash.getIndex(vId.x, vId.y, vId.z);
-			printf("Gird: %d, Pid: %d\n", gId, pId);
+
+			//DEBUG
+			// PT_d("Gird", gId, pId);
+
 			if (gId == -1) break;
 
 			int totalNum = hash.getCounter(gId);
+
+			//DEBUG 
+			// PT_d("Num", totalNum, pId);
+
 			for (int i = 0; i < totalNum; i++) {
 				int nbId = hash.getParticleId(gId, i);
 				Coord pos_i = position[nbId];
 				Real d_v0 = (pos_i - cap.v0).norm();
 				Real d_v1 = (pos_i - cap.v1).norm();
-				Real d_line = (pos_i - m).dot(s) / d;
+				Real d_line = fabs((pos_i - m).dot(s) / d);
 				Real min_d = min(d_v0, min(d_v1, d_line));
 				if (min_d < h)
 				{
-					capdis[nbId].atomicInsert(min_d);
-					capIds[nbId].atomicInsert(pId);
-					pointIds[pId].atomicInsert(nbId);
+					count[pId] +=1;
 				}
 			}
+			if (next_t > 1) break; //终点格子
 
+			float tmp_t = -1;
+			int3 next_c;	
 			// 选取线段上最近Grid
-			//FIXME: 选取不正确
-			float next_t = -1;
-			int3 next_c;
 			for (int c = 1; c < 27; c++)
 			{
 				int3 cId;
@@ -111,13 +122,15 @@ namespace dyno
 					// 线段与立方体求交
 					Coord min_v = hash.getMin3(cId);
 					Coord max_v = hash.getMax3(cId);
-					Coord min_t = (min_v - m) / s;
-					Coord max_t = (max_v - m) / s;
+					Coord time1 = (min_v - m) / s;
+					Coord time2 = (max_v - m) / s;
+					Coord min_t(min(time1[0],time2[0]), min(time1[1],time2[1]), min(time1[2],time2[2]));
+					Coord max_t(max(time1[0],time2[0]), max(time1[1],time2[1]), max(time1[2],time2[2]));
 					float mint = max(min_t[0], max(min_t[1], min_t[2]));
 					float maxt = min(max_t[0], min(max_t[1], max_t[2]));
-					if (mint > 0 && mint < maxt && (next_t == -1 || mint < next_t))
+					if (mint > 0 && mint < maxt && (mint < tmp_t || tmp_t == -1) && mint >= next_t)
 					{
-						next_t = mint;
+						tmp_t = maxt;
 						next_c = cId;
 						//DEBUG
 						//if (cId == vId) printf("Error cId == vId\n");
@@ -127,62 +140,143 @@ namespace dyno
 
 			if (next_t < 0 || next_t > 1) break;
 			
+			next_t = tmp_t;
 			vId = next_c;
 		}
 	}
 
 	// max_cap {O(Gird*Point)}
-	// 统计<顶点，关节>点对
-	__global__ void K_CountPair(
-		DArrayList<int> pointIds,
-		DArray<int> count)
-	{
-		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
-		if (pId >= count.size()) return;
-
-		count[pId] = pointIds[pId].size();
-		//if (count[pId] < 0) printf("Error <0\n");
-		//if (count[pId] == 0) printf("Error =0 %d\n", pId);
-	}
-
-	// max_cap {O(Gird*Point)}
-	// 存储<顶点，关节>点对
-	template<typename JCapsule, typename Pair2>
-	__global__ void K_SetPair(
+	// 寻找关节所延伸胶囊体控制的顶点
+	template<typename Coord, typename JCapsule, typename TDataType, typename Pair3f>
+	__global__ void K_ComputeNeighbor(
+		DArray<Coord> position, 
+		GridHash<TDataType> hash, 
+		Real h,
 		DArray<JCapsule> caps,
-		DArrayList<int> pointIds,
-		DArrayList<int> capIds,
-		DArrayList<Real> capdis,
-		DArray<int> count,
-		DArray<Pair2> pairs)
+		DArray<Pair3f> capPairs,
+		DArray<int> count)  // cap:[<>..]
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= caps.size()) return;
+		
+		JCapsule cap = caps[pId];
+		int3 vId0 = hash.getIndex3(cap.v0);
+		int3 vId1 = hash.getIndex3(cap.v1);
+		
+		//DEBUG 
+		// printf("[(%d,%d,%d)->(%d,%d,%d)] pId:%d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
 
-		auto& ptIds = pointIds[pId];
-		int size_i = ptIds.size();
-		for (int i = 0; i < size_i; ++i)
-		{
-			int point = ptIds[i];
-			auto& cIds = capIds[point];
-			auto& cdis = capdis[point];
-			int size_j = cIds.size();
-			Real min_d = -1;
-			int id_joint = -1;
-			for (int j = 0; j < size_j; ++j)
-			{
-				JCapsule cap = caps[cIds[j]];
-				if (min_d == -1 || cdis[j] < min_d) // 就近原则（暂时）
+		Coord m = cap.v0;
+		Coord s = (cap.v1 - cap.v0);
+		Real d = s.norm();
+
+		// 遍历线段所覆盖的Grid
+		int3 vId = vId0;
+		
+		// 线段与立方体求交
+		Coord max_v = hash.getMax3(vId);
+		Coord max_t = (max_v - m) / s;
+		float next_t = min(max_t[0], min(max_t[1], max_t[2])); //边界时间段
+		int start = count[pId];
+		int cnt = 0;
+		while(true)
+		{	
+			int gId = hash.getIndex(vId.x, vId.y, vId.z);
+
+			//DEBUG
+			// PT_d("Gird", gId, pId);
+
+			if (gId == -1) break;
+
+			int totalNum = hash.getCounter(gId);
+
+			//DEBUG 
+			// PT_d("Num", totalNum, pId);
+
+			for (int i = 0; i < totalNum; i++) {
+				int nbId = hash.getParticleId(gId, i);
+				Coord pos_i = position[nbId];
+				Real d_v0 = (pos_i - cap.v0).norm();
+				Real d_v1 = (pos_i - cap.v1).norm();
+				Real d_line = fabs((pos_i - m).dot(s) / d);
+				Real min_d = min(d_v0, min(d_v1, d_line));
+				if (min_d < h)
 				{
-					min_d = cdis[j];
-					id_joint = cap.id_joint;
+					//DEBUG
+					// PT_f("MIN", min_d, pId);
+					// printf("<id:%d dis:%f joint:%d>  pId:%d\n", nbId, min_d, cap.id_joint, pId);
+					capPairs[cnt + start] = (Pair3f(nbId, min_d, cap.id_joint));
+					cnt++;
 				}
 			}
-			if (id_joint != -1)  // assert(id_joint != -1)
+			if (next_t > 1) break; //终点格子
+
+			float tmp_t = -1;
+			int3 next_c;	
+			// 选取线段上最近Grid
+			for (int c = 1; c < 27; c++)
 			{
-				pairs[count[pId] + i] = Pair2(id_joint, point);
+				int3 cId;
+				cId.x = vId.x + offset_nq2[c][0];
+				cId.y = vId.y + offset_nq2[c][1];
+				cId.z = vId.z + offset_nq2[c][2];
+				if (cId.x >= 0 && cId.y >= 0 && cId.z >= 0) 
+				{ 	
+					// 线段与立方体求交
+					Coord min_v = hash.getMin3(cId);
+					Coord max_v = hash.getMax3(cId);
+					Coord time1 = (min_v - m) / s;
+					Coord time2 = (max_v - m) / s;
+					Coord min_t(min(time1[0],time2[0]), min(time1[1],time2[1]), min(time1[2],time2[2]));
+					Coord max_t(max(time1[0],time2[0]), max(time1[1],time2[1]), max(time1[2],time2[2]));
+					float mint = max(min_t[0], max(min_t[1], min_t[2]));
+					float maxt = min(max_t[0], min(max_t[1], max_t[2]));
+					if (mint > 0 && mint < maxt && (mint < tmp_t || tmp_t == -1) && mint >= next_t)
+					{
+						tmp_t = maxt;
+						next_c = cId;
+						//DEBUG
+						//if (cId == vId) printf("Error cId == vId\n");
+					}
+				}
 			}
+
+			if (next_t < 0 || next_t > 1) break;
+			
+			next_t = tmp_t;
+			vId = next_c;
 		}
+	}
+
+
+	// max_cap 
+	// 统计顶点数
+	template<typename Pair3f>
+	__global__ void K_CountPoint(
+		DArray<Pair3f> capPairs,
+		DArray<int> count)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= capPairs.size()) return;
+		if( pId == capPairs.size() - 1 || int(capPairs[pId][0]) != int(capPairs[pId + 1][0]))
+			count[pId] = 1;
+		else 
+			count[pId] = 0;
+		
+	}
+
+	// max_point
+	// set out<顶点, 关节>
+	template<typename Pair3f, typename Pair2>
+	__global__ void K_SetOutPair(
+		DArray<Pair3f> capPairs,
+		DArray<int> count,
+		DArray<Pair2> outPairs)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= capPairs.size()) return;
+		if( pId == capPairs.size() - 1 || int(capPairs[pId][0]) != int(capPairs[pId + 1][0]))
+			outPairs[count[pId]] = Pair2(capPairs[pId][2], capPairs[pId][0]);
 	}
 
 	template<typename TDataType>
@@ -197,11 +291,12 @@ namespace dyno
 		if (this->outPJPair()->isEmpty())
 			this->outPJPair()->allocate();
 
-		auto& pairs = this->outPJPair()->getData();
+		auto& outPairs = this->outPJPair()->getData();
 
 		// uint numJt  = this->inJointSize()->getData();
 		uint numPt  = this->inPosition()->getDataPtr()->size();
 		uint numCp  = this->inCapsule()->getDataPtr()->size();
+		uint sizeLimit = this->varSizeLimit()->getData();
 
 		// Construct hash grid
 		Reduction<Coord> reduce;
@@ -213,57 +308,53 @@ namespace dyno
 		hashGrid.clear();
 		hashGrid.construct(points);
 
-		DArrayList<int> pointIds;
-		DArrayList<int> capIds;
-		DArrayList<Real> capdis;
 		DArray<int> count;
 		
-		pointIds.resize(numCp);
-		capIds.resize(numPt);
-		capdis.resize(numPt); // TODO: 待优化空间
 		count.resize(numCp);
-		// FIXME 无输出
+		cuExecute(numCp,
+			K_CountNeighbor,
+			points,
+			hashGrid,
+			h,
+			capsules,
+			count);
+		cuSynchronize();
+
+		int numPair = m_reduce.accumulate(count.begin(), count.size());
+		
+		DArray<Pair3f>capJointPairs;
+		capJointPairs.resize(numPair);
 		cuExecute(numCp,
 			K_ComputeNeighbor,
 			points,
 			hashGrid,
 			h,
 			capsules,
-			pointIds,
-			capIds,
-			capdis);
-		cuSynchronize();
-
-		// BUGXX
-		int ppp = pointIds.elementSize();
-		int ppp2 = capIds.elementSize();
-		int ppp3 = capdis.elementSize();
-		// std::cerr << pointIds.elementSize() << std::endl;
-
-		cuExecute(numCp,
-			K_CountPair,
-			pointIds,
+			capJointPairs,
 			count);
 		cuSynchronize();
-	
-		int numPr = m_reduce.accumulate(count.begin(), count.size());
-		m_scan.exclusive(count, true);
-		pairs.resize(numPr);
 
-		cuExecute(numCp,
-			K_SetPair,
-			capsules,
-			pointIds,
-			capIds,
-			capdis,
-			count,
-			pairs);
+		thrust::sort(thrust::device, capJointPairs.begin(), capJointPairs.begin() + capJointPairs.size());
+		
+		count.resize(numPair);
+		cuExecute(numPair,
+			K_CountPoint,
+			capJointPairs,
+			count);
 		cuSynchronize();
 
+		int numPoint = m_reduce.accumulate(count.begin(), count.size());
+		m_scan.exclusive(count, true);
+		
+		outPairs.resize(numPoint);
+		cuExecute(numPair,
+			K_SetOutPair,
+			capJointPairs,
+			count,
+			outPairs);
+
+		capJointPairs.clear();
 		count.clear();
-		pointIds.clear();
-		capIds.clear();
-		capdis.clear();
 		hashGrid.clear();
 	}
 

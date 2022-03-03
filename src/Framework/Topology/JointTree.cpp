@@ -15,7 +15,7 @@ namespace dyno
         RotationActive = true;
         PreRotation = Coord(0);
         PreTranslation = Coord(0);
-        PreScaling = Coord(1);
+        PreScaling = Coord(1); 
 
         LclTranslation = Coord(0);
         LclRotation = Coord(0);
@@ -129,17 +129,26 @@ namespace dyno
         return  translation * scaling * rotation_x * rotation_y * rotation_z;
     }
 
-	// FIXME 存在问题：X*getLocalTransform=X
     // 遍历关节层次时，顺便更新
 	template<typename TDataType>
     void JointTree<TDataType>::getGlobalTransform()
     {
         // 注意顺序
-        this->GlobalTransform = getTransform(this->LclTranslation, this->LclScaling, this->LclScaling);
+        this->GlobalTransform = getTransform(this->LclTranslation, this->LclRotation, this->LclScaling);
         if(this->parent != nullptr)
             this->GlobalTransform = this->parent->GlobalTransform * this->GlobalTransform;
         else
+        {
             this->GlobalTransform = getTransform(this->PreTranslation, this->PreRotation, this->PreScaling) * this->GlobalTransform;
+            // float s = 10000;
+            // Mat4f scaling= Mat4f(
+            // s, 0, 0, 0,
+            // 0, s, 0, 0,
+            // 0, 0, s, 0,
+            // 0, 0, 0, 1);
+            // this->GlobalTransform = scaling * this->GlobalTransform;
+        }
+            
     }
 
 

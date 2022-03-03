@@ -38,7 +38,7 @@ namespace dyno
 	private:
 		Reduction<int> m_reduce;
 		Scan m_scan;
-
+		bool is_body = false;
 		//Searching radius
 		Real m_radius = 0.0125;
 
@@ -46,7 +46,8 @@ namespace dyno
 		//映射关系
 		DArray<Pair2> m_tetClusters; 
 		DArray<Pair2> m_triClusters;
-		
+		DArray<Pair2> m_pointClusters;
+
 		JointList* m_from = nullptr;
 		// std::shared_ptr<JointTree<TDataType>> m_from = nullptr;
 		std::shared_ptr<MixSet<TDataType>> m_to = nullptr;

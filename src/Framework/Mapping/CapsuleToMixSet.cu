@@ -5,6 +5,10 @@
 
 #include <iostream>
 
+#define PT_d(s, x, y) printf("%s: %d  pId: %d\n", s, x, y)
+#define PT_f(s, x, y) printf("%s: %f  pId: %d\n", s, x, y)
+#define PT_e(s, y) printf("[%s]  pId: %d\n", s, y)
+
 namespace dyno
 {
 	template<typename TDataType>
@@ -85,6 +89,31 @@ namespace dyno
 		}
 	}	
 
+	template<typename Pair2, typename Mat4f, typename Coord>
+	__global__ void CM_ApplyTransformPoint(
+		DArray<Pair2> clusters,
+		DArray<Mat4f> transform,
+		DArray<Coord> to)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= clusters.size()) return;
+		auto& couple = clusters[pId];
+		int point_i = couple[1];
+		
+		// PT_d("point", point_i, pId);
+		// PT_d("joint", couple[0], pId);
+		Coord old_p = to[point_i];
+		Vec4f tmp_p(old_p[0], old_p[1], old_p[2], 1);
+		
+		tmp_p = transform[couple[0]] * tmp_p;
+		// PT_f("tmp3", tmp_p[3], pId);
+		old_p[0] = tmp_p[0] / tmp_p[3];
+		old_p[1] = tmp_p[1] / tmp_p[3];
+		old_p[2] = tmp_p[2] / tmp_p[3];
+
+		to[point_i] = old_p;
+	}	
+
 	template<typename TDataType>
 	bool CapsuleToMixSet<TDataType>::apply()
 	{
@@ -103,23 +132,36 @@ namespace dyno
 		GlTransform.assign(p_transform);
 
 		// FIXME: 四面体和三角面片重合点会无法复原
+		// TODO: 改为只控制顶点
         // Animation
-		cuExecute(m_triClusters.size(),
-			CM_ApplyTransformTri,
-			m_triClusters,
-			GlTransform,
-			m_to->getTriangles(),
-			m_to->getAllPoints());
-		cuSynchronize();
-	
-		cuExecute(m_tetClusters.size(),
-			CM_ApplyTransformTet,
-			m_tetClusters,
-			GlTransform,
-			m_to->getTetrahedrons(),
-			m_to->getAllPoints());
-		cuSynchronize();
-
+		if(is_body)
+		{
+			cuExecute(m_triClusters.size(),
+				CM_ApplyTransformTri,
+				m_triClusters,
+				GlTransform,
+				m_to->getTriangles(),
+				m_to->getAllPoints());
+			cuSynchronize();
+		
+			cuExecute(m_tetClusters.size(),
+				CM_ApplyTransformTet,
+				m_tetClusters,
+				GlTransform,
+				m_to->getTetrahedrons(),
+				m_to->getAllPoints());
+			cuSynchronize();
+		}
+		else
+		{
+			cuExecute(m_pointClusters.size(),
+				CM_ApplyTransformPoint,
+				m_pointClusters,
+				GlTransform,
+				m_to->getAllPoints());
+			cuSynchronize();
+		}
+		
 		return true;
 	}
 
@@ -205,11 +247,7 @@ namespace dyno
 	void CapsuleToMixSet<TDataType>::match()
 	{
 		// 获取胶囊体接触的顶点
-		auto nbQuery = std::make_shared<NeighborPointQueryJoint<TDataType>>();
 
-		nbQuery->inRadius()->setValue(m_radius);
-		nbQuery->inPosition()->allocate()->assign(m_to->getPoints());
-		// nbQuery->inJointSize()->setValue(m_from->size());
 		
 		int for_cnt = 0;
 		for (auto joint : *m_from)
@@ -220,7 +258,7 @@ namespace dyno
 			Vec4f tmp = joint->GlobalTransform * Vec4f(0, 0, 0, 1) ;
 			joint->GlCoord = Coord(tmp[0] / tmp[3], tmp[1] / tmp[3], tmp[2] / tmp[3]);
 			m_initInvTransform.push_back(joint->GlobalTransform.inverse());
-			//std::cerr << for_cnt  <<" :  " <<joint->GlCoord[0] << ", " << joint->GlCoord[1] << ", " << joint->GlCoord[2] << "\n";
+			// std::cerr << for_cnt  <<" :  " <<joint->GlCoord[0] << ", " << joint->GlCoord[1] << ", " << joint->GlCoord[2] << "\n";
 		}
 
 		std::vector<JCapsule>capsule_list;
@@ -234,13 +272,18 @@ namespace dyno
 												joint->GlCoord, joint_son->GlCoord});
 				++id_cap;
 				//DEBUG
-				printf("(%f,%f,%f) -> (%f,%f,%f)\n",
-					joint->GlCoord[0], joint->GlCoord[1], joint->GlCoord[2],
-					joint_son->GlCoord[0], joint_son->GlCoord[1], joint_son->GlCoord[2]);
+				//float s = 1;
+				//printf("(%f,%f,%f) -> (%f,%f,%f)\n",
+				//	joint->GlCoord[0] / s, joint->GlCoord[1] / s, joint->GlCoord[2] / s,
+				//	joint_son->GlCoord[0] / s, joint_son->GlCoord[1] / s, joint_son->GlCoord[2] / s);
 			}
 			++id_joint;
 		}
+ 		auto nbQuery = std::make_shared<NeighborPointQueryJoint<TDataType>>();
 
+		nbQuery->inRadius()->setValue(m_radius);
+		nbQuery->inPosition()->allocate()->assign(m_to->getPoints());
+		// nbQuery->inJointSize()->setValue(m_from->size());
 		nbQuery->inCapsule()->allocate()->assign(capsule_list);
 
 		nbQuery->update();
@@ -253,7 +296,7 @@ namespace dyno
 
 		DArray<int> count;
 		
-		auto fun = [=](DArrayList<int>& Ver2X, DArray<Pair2>& m_Clusters) mutable 
+		auto fun_body = [=](DArrayList<int>& Ver2X, DArray<Pair2>& m_Clusters) mutable 
 		{
 			int pairVerJointSize = p_pairs2.size();
 			count.resize(pairVerJointSize);
@@ -280,7 +323,7 @@ namespace dyno
 			cuSynchronize();
 
 			count.resize(numPair3);
-			
+			// sort?
 			cuExecute(numPair3,
 				CM_CountTopoList,
 				p_pairs3,
@@ -308,12 +351,17 @@ namespace dyno
 			cuSynchronize();
 		};
 		
-		if (p_pairs2.size())
+		if (is_body && p_pairs2.size())
 		{
-			fun(m_to->getVer2Tri(), m_triClusters);
-			fun(m_to->getVer2Tet(), m_tetClusters);
+			fun_body(m_to->getVer2Tri(), m_triClusters);
+			fun_body(m_to->getVer2Tet(), m_tetClusters);
+		}
+		else
+		{
+			m_pointClusters.assign(p_pairs2);
 		}
 		
+
 
 	}
 

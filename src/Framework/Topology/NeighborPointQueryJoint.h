@@ -13,6 +13,9 @@ namespace dyno
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
 		typedef typename TopologyModule::Pair2 Pair2;
+		
+		typedef VectorND<Real, 3> Pair3f;
+
 
 		NeighborPointQueryJoint();
 		~NeighborPointQueryJoint() override;
@@ -24,7 +27,7 @@ namespace dyno
 		Scan m_scan;
 
 	public:
-		// DEF_VAR(uint, SizeLimit, 0, "Maximum number of neighbors");
+		DEF_VAR(uint, SizeLimit, 40, "Maximum number of neighbors");
 
 		/**
 		* @brief Capsules radius

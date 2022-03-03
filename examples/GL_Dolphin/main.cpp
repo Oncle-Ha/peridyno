@@ -168,27 +168,27 @@ int main()
 
 	engine = new GLRenderEngine;
 	// set point 
-	/*
-	//auto pointRenderer = std::make_shared<GLPointVisualModule>();
-	//pointRenderer->setColor(Vec3f(1, 0.2, 1));
-	//pointRenderer->setColorMapMode(GLPointVisualModule::PER_OBJECT_SHADER);
+	
+	auto pointRenderer = std::make_shared<GLPointVisualModule>();
+	pointRenderer->setColor(Vec3f(1, 0.2, 1));
+	pointRenderer->setColorMapMode(GLPointVisualModule::PER_OBJECT_SHADER);
 
 	//dolphin->getSurfaceNode()->currentTopology()->connect(pointRenderer->inPointSet());
 	//dolphin->getSurfaceNode()->graphicsPipeline()->pushModule(pointRenderer);
 
-	//dolphin->currentPoints()->connect(pointRenderer->inPointSet());
-	//dolphin->currentVelocity()->connect(pointRenderer->inColor());
+	dolphin->currentTopology()->connect(pointRenderer->inPointSet());
+	dolphin->currentVelocity()->connect(pointRenderer->inColor());
 
-	//dolphin->graphicsPipeline()->pushModule(pointRenderer);
+	dolphin->graphicsPipeline()->pushModule(pointRenderer);
 
-	// pointRenderer->setVisible(false);
-	*/
+	pointRenderer->setVisible(true);
+	
 
 	// set surface
-	auto sRender = std::make_shared<GLSurfaceVisualModule>();
-	sRender->setColor(Vec3f(1, 1, 0));
-	dolphin->getSurfaceNode()->currentTopology()->connect(sRender->inTriangleSet());
-	dolphin->getSurfaceNode()->graphicsPipeline()->pushModule(sRender);
+	// auto sRender = std::make_shared<GLSurfaceVisualModule>();
+	// sRender->setColor(Vec3f(1, 1, 0));
+	// dolphin->getSurfaceNode()->currentTopology()->connect(sRender->inTriangleSet());
+	// dolphin->getSurfaceNode()->graphicsPipeline()->pushModule(sRender);
 	// sRender->setVisible(false);
 
 	GlfwApp window;
