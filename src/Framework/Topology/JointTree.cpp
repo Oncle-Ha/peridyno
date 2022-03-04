@@ -20,6 +20,7 @@ namespace dyno
         LclTranslation = Coord(0);
         LclRotation = Coord(0);
         LclScaling = Coord(1);
+		
     }
     
     template<typename TDataType>
@@ -141,7 +142,12 @@ namespace dyno
         {
             //DEBUG 简单平移
             this->GlobalTransform = getTransform(this->PreTranslation, this->PreRotation, this->PreScaling) * this->GlobalTransform;
-            this->PreTranslation += Coord(0.00001, 0.00001, 0.00001); 
+             
+            Coord tmp_d(0,0,0);
+            for (int i = 0; i < 3; ++i)
+                tmp_d[i] += dist(generator)  * 0.0005;
+            this->PreTranslation += tmp_d;
+            
             // float s = 10000;
             // Mat4f scaling= Mat4f(
             // s, 0, 0, 0,

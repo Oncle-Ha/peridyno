@@ -71,7 +71,7 @@ namespace dyno
 		int3 vId1 = hash.getIndex3(cap.v1);
 		
 		//DEBUG 
-		// printf("[(%d,%d,%d)->(%d,%d,%d)] pId: %d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
+		printf("[(%d,%d,%d)->(%d,%d,%d)] pId: %d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
 
 		Coord m = cap.v0;
 		Coord s = (cap.v1 - cap.v0);
@@ -87,32 +87,43 @@ namespace dyno
 		Coord time2 = (max_v - m) / s;
 		Coord max_t(max(time1[0],time2[0]), max(time1[1],time2[1]), max(time1[2],time2[2]));
 		float next_t = min(max_t[0], min(max_t[1], max_t[2]));	//边界时间段	
-		// PT_f("time", next_t, pId);
+		PT_f("time", next_t, pId);
 		while(true)
 		{	
 			int gId = hash.getIndex(vId.x, vId.y, vId.z);
 
 			//DEBUG
 			// PT_d("Gird", gId, pId);
-			// printf("Gird:%d [%d,%d,%d] pId: %d\n", gId, vId.x, vId.y, vId.z, pId);
+			printf("Gird:%d [%d,%d,%d] pId: %d\n", gId, vId.x, vId.y, vId.z, pId);
 
 			if (gId == -1) break;
 
-			int totalNum = hash.getCounter(gId);
-
 			//DEBUG 
-			// PT_d("Num", totalNum, pId);
-
-			for (int i = 0; i < totalNum; i++) {
-				int nbId = hash.getParticleId(gId, i);
-				Coord pos_i = position[nbId];
-				Real d_v0 = (pos_i - cap.v0).norm();
-				Real d_v1 = (pos_i - cap.v1).norm();
-				Real d_line = fabs((pos_i - m).dot(s) / d);
-				Real min_d = min(d_v0, min(d_v1, d_line));
-				if (min_d < h)
-				{
-					count[pId] +=1;
+			//PT_d("Num", totalNum, pId);
+			
+			for (int c = 0; c < 27; c++)
+			{
+				int3 cId;
+				cId.x = vId.x + offset_nq2[c][0];
+				cId.y = vId.y + offset_nq2[c][1];
+				cId.z = vId.z + offset_nq2[c][2];
+				if (cId.x >= 0 && cId.y >= 0 && cId.z >= 0) 
+				{ 	
+					int cNumId = hash.getIndex(cId.x, cId.y, cId.z);
+					int totalNum = hash.getCounter(cNumId);
+					for (int i = 0; i < totalNum; i++) {
+						int nbId = hash.getParticleId(cNumId, i);
+						Coord pos_i = position[nbId];
+						Real d_v0 = (pos_i - cap.v0).norm();
+						Real d_v1 = (pos_i - cap.v1).norm();
+						Real d_line = fabs((pos_i - m).dot(s) / d);
+						Real min_d = min(d_v0, min(d_v1, d_line));
+						if (min_d < h)
+						{
+							PT_f("d_line", d_line, pId);
+							count[pId] +=1;
+						}
+					}
 				}
 			}
 			if (next_t > 1) break; //终点格子
@@ -155,7 +166,7 @@ namespace dyno
 			vId = next_c;
 		}
 		//DEBUG
-		// PT_d("Count", count[pId], pId);
+		PT_d("Count", count[pId], pId);
 	}
 
 	// max_cap {O(Gird*Point)} TODO更新同Count一样
@@ -204,29 +215,36 @@ namespace dyno
 			// PT_d("Gird", gId, pId);
 
 			if (gId == -1) break;
-
-			int totalNum = hash.getCounter(gId);
-
-			//DEBUG 
-			// PT_d("Num", totalNum, pId);
-
-			for (int i = 0; i < totalNum; i++) {
-				int nbId = hash.getParticleId(gId, i);
-				Coord pos_i = position[nbId];
-				Real d_v0 = (pos_i - cap.v0).norm();
-				Real d_v1 = (pos_i - cap.v1).norm();
-				Real d_line = fabs((pos_i - m).dot(s) / d);
-				Real min_d = min(d_v0, min(d_v1, d_line));
-				if (min_d < h)
-				{
-					//DEBUG
-					// PT_f("MIN", min_d, pId);
-					// printf("<id:%d dis:%f joint:%d>  pId:%d\n", nbId, min_d, cap.id_joint, pId);
-					capPairs[cnt + start] = (Pair3f(nbId, min_d, cap.id_joint));
-					// PT_d("index", cnt + start, pId);
-					cnt++;
+			
+			for (int c = 0; c < 27; c++)
+			{
+				int3 cId;
+				cId.x = vId.x + offset_nq2[c][0];
+				cId.y = vId.y + offset_nq2[c][1];
+				cId.z = vId.z + offset_nq2[c][2];
+				if (cId.x >= 0 && cId.y >= 0 && cId.z >= 0) 
+				{ 	
+					int cNumId = hash.getIndex(cId.x, cId.y, cId.z);
+					int totalNum = hash.getCounter(cNumId);
+					for (int i = 0; i < totalNum; i++) {
+						int nbId = hash.getParticleId(cNumId, i);
+						Coord pos_i = position[nbId];
+						Real d_v0 = (pos_i - cap.v0).norm();
+						Real d_v1 = (pos_i - cap.v1).norm();
+						Real d_line = fabs((pos_i - m).dot(s) / d);
+						Real min_d = min(d_v0, min(d_v1, d_line));
+						if (min_d < h)
+						{
+							PT_f("MIN", min_d, pId);
+							// printf("<id:%d dis:%f joint:%d>  pId:%d\n", nbId, min_d, cap.id_joint, pId);
+							capPairs[cnt + start] = (Pair3f(nbId, min_d, cap.id_joint));
+							// PT_d("index", cnt + start, pId);
+							cnt++;
+						}
+					}
 				}
 			}
+
 			if (next_t > 1) break; //终点格子
 
 			float tmp_t = -1;
@@ -340,7 +358,7 @@ namespace dyno
 			K_CountNeighbor,
 			points,
 			hashGrid,
-			h * 10,
+			h,
 			capsules,
 			count);
 		cuSynchronize();
@@ -354,7 +372,7 @@ namespace dyno
 			K_ComputeNeighbor,
 			points,
 			hashGrid,
-			h * 10,
+			h,
 			capsules,
 			capJointPairs,
 			count);

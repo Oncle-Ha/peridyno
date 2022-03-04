@@ -142,7 +142,7 @@ int main()
 {
 	SceneGraph& scene = SceneGraph::getInstance();
 
-	scene.setGravity(Vec3f(0, 0, 0));
+	// scene.setGravity(Vec3f(0, 0, 0));
 	// set scene
 	std::shared_ptr<StaticBoundary<DataType3f>> root = scene.createNewScene<StaticBoundary<DataType3f>>();
 	root->loadCube(Vec3f(0), Vec3f(1), 0.005f, true);
@@ -155,18 +155,20 @@ int main()
 	root->addParticleSystem(dolphin); 
 
 	dolphin->setMass(1.0f);
+
 	// dolphin->loadMixFile("../../data/dolphin/Dolphin");
 	// loadFBX("../../data/dolphin/Dolphin_Particles.fbx");
+	// // 顺序：缩放，平移
+	// dolphin->scale(0.2f); 
+	// dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
 	
-	// DEBUG 
+	//DEBUG 
 	dolphin->loadParticles(Vec3f(-2, 0, -0.5), Vec3f(2, 4, 0.5), 0.08);
 	loadFBX("../../data/dolphin/BoneBox.fbx");
+	//顺序：缩放，平移
+	dolphin->scale(0.1f); 
+	dolphin->translate(Vec3f(0.5f, 0.0f, 0.25f));
 
-	// 顺序：缩放，平移
-	dolphin->scale(0.1f); // 太大会导致粒子间距过大以至于邻居为空
-	dolphin->translate(Vec3f(0.5f, 0.0f, 0.25f));
-	dolphin->scale(0.1f); // 太大会导致粒子间距过大以至于邻居为空
-	dolphin->translate(Vec3f(0.5f, 0.0f, 0.25f));
 	dolphin->setVisible(true);
 
 	

@@ -1,6 +1,8 @@
 #pragma once
 #include "Module/TopologyModule.h"
 
+#include <iterator>
+#include <random>
 namespace dyno
 {
 
@@ -25,6 +27,10 @@ namespace dyno
 	class JointTree : public TopologyModule
 	{ 
         DECLARE_CLASS_1(JointTree, TDataType)
+    private:
+        std::default_random_engine generator;
+        std::normal_distribution<double> dist;
+        
 	public:
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
