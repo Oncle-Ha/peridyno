@@ -107,7 +107,6 @@ namespace dyno
 		old_p[1] = tmp_p[1] / tmp_p[3];
 		old_p[2] = tmp_p[2] / tmp_p[3];
 
-		//DEBUG
 		to[point_i] = old_p;
 	}	
 
@@ -200,7 +199,7 @@ namespace dyno
 		DArray<Pair3> pair3,
 		DArray<int> count)
 	{
-		int pId = threadIdx.x + (blockIdx.x + blockDim.x);
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= pair3.size()) return;
 		count[pId] =  (pId == pair3.size() - 1 || pair3[pId + 1][0] != pair3[pId][0]); // TODO: check m_scan
 	}
@@ -212,7 +211,7 @@ namespace dyno
 		DArray<int> count,
 		DArrayList<Pair3> topoList)
 	{
-		int pId = threadIdx.x + (blockIdx.x + blockDim.x);
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= pair3.size()) return;
 		topoList[count[pId]].atomicInsert(pair3[pId]);
 	}
@@ -223,7 +222,7 @@ namespace dyno
 		DArrayList<Pair3> topolist,
 		DArray<Pair2> pairJoint)
 	{
-		int pId = threadIdx.x + (blockIdx.x + blockDim.x);
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= pairJoint.size()) return;
 		auto& list = topolist[pId];
 
@@ -244,9 +243,9 @@ namespace dyno
 	__global__ void CM_UpdateColor1(
 		DArray<Vec3f> colors)
 	{
-		int pId = threadIdx.x + (blockIdx.x + blockDim.x);
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= colors.size()) return;
-		colors[pId] = Vec3f(0, 0, 0);
+		colors[pId] = Vec3f(0.f, 0.f, 0.f);
 	}
 	
 	template<typename Vec3f, typename Pair2>
@@ -254,9 +253,9 @@ namespace dyno
 		DArray<Vec3f> colors,
 		DArray<Pair2> clusters)
 	{
-		int pId = threadIdx.x + (blockIdx.x + blockDim.x);
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= clusters.size()) return;
-		colors[clusters[pId][1]] = Vec3f(0,1,0);
+		colors[clusters[pId][1]] = Vec3f(0.f,1.f,0.f);
 	}
 
 	template<typename TDataType>
@@ -274,7 +273,7 @@ namespace dyno
 			Vec4f tmp = joint->GlobalTransform * Vec4f(0, 0, 0, 1) ;
 			joint->GlCoord = Coord(tmp[0] / tmp[3], tmp[1] / tmp[3], tmp[2] / tmp[3]);
 			m_initInvTransform.push_back(joint->GlobalTransform.inverse());
-			// std::cerr << for_cnt  <<" :  " <<joint->GlCoord[0] << ", " << joint->GlCoord[1] << ", " << joint->GlCoord[2] << "\n";
+			std::cerr << for_cnt  <<" :  " <<joint->GlCoord[0] << ", " << joint->GlCoord[1] << ", " << joint->GlCoord[2] << "\n";
 		}
 
 		std::vector<JCapsule>capsule_list;
@@ -288,10 +287,10 @@ namespace dyno
 												joint->GlCoord, joint_son->GlCoord});
 				++id_cap;
 				//DEBUG
-				//float s = 1;
-				//printf("(%f,%f,%f) -> (%f,%f,%f)\n",
-				//	joint->GlCoord[0] / s, joint->GlCoord[1] / s, joint->GlCoord[2] / s,
-				//	joint_son->GlCoord[0] / s, joint_son->GlCoord[1] / s, joint_son->GlCoord[2] / s);
+				float s = 1;
+				printf("(%f,%f,%f) -> (%f,%f,%f)\n",
+					joint->GlCoord[0] / s, joint->GlCoord[1] / s, joint->GlCoord[2] / s,
+					joint_son->GlCoord[0] / s, joint_son->GlCoord[1] / s, joint_son->GlCoord[2] / s);
 			}
 			++id_joint;
 		}

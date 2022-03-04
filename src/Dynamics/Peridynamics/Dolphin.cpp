@@ -51,8 +51,9 @@ namespace dyno
         auto jointMapping = this->template addTopologyMapping<CapsuleToMixSet<TDataType>>("joint_mapping");
         jointMapping->setFrom(&m_jointMap);
         jointMapping->setTo(mixSet);
-        jointMapping->setCapsuleRadius(0.0125);
-        jointMapping->outColor()->connect(this->currentColor());
+        jointMapping->setCapsuleRadius(0.125);
+        this->currentColor()->connect(jointMapping->outColor());
+        // jointMapping->outColor()->connect(this->currentColor());
 
     }
 

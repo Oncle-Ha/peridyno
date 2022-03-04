@@ -71,7 +71,7 @@ namespace dyno
 		int3 vId1 = hash.getIndex3(cap.v1);
 		
 		//DEBUG 
-		printf("[(%d,%d,%d)->(%d,%d,%d)] pId: %d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
+		// printf("[(%d,%d,%d)->(%d,%d,%d)] pId: %d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
 
 		Coord m = cap.v0;
 		Coord s = (cap.v1 - cap.v0);
@@ -87,14 +87,14 @@ namespace dyno
 		Coord time2 = (max_v - m) / s;
 		Coord max_t(max(time1[0],time2[0]), max(time1[1],time2[1]), max(time1[2],time2[2]));
 		float next_t = min(max_t[0], min(max_t[1], max_t[2]));	//边界时间段	
-		PT_f("time", next_t, pId);
+		// PT_f("time", next_t, pId);
 		while(true)
 		{	
 			int gId = hash.getIndex(vId.x, vId.y, vId.z);
 
 			//DEBUG
 			// PT_d("Gird", gId, pId);
-			printf("Gird:%d [%d,%d,%d] pId: %d\n", gId, vId.x, vId.y, vId.z, pId);
+			// printf("Gird:%d [%d,%d,%d] pId: %d\n", gId, vId.x, vId.y, vId.z, pId);
 
 			if (gId == -1) break;
 
@@ -148,12 +148,14 @@ namespace dyno
 					}
 				}
 			}
-			PT_f("time", next_t, pId);
+			// PT_f("time", next_t, pId);
 			if (next_t < 0 || next_t > 1) break;
 			
 			next_t = tmp_t;
 			vId = next_c;
 		}
+		//DEBUG
+		// PT_d("Count", count[pId], pId);
 	}
 
 	// max_cap {O(Gird*Point)} TODO更新同Count一样
@@ -221,6 +223,7 @@ namespace dyno
 					// PT_f("MIN", min_d, pId);
 					// printf("<id:%d dis:%f joint:%d>  pId:%d\n", nbId, min_d, cap.id_joint, pId);
 					capPairs[cnt + start] = (Pair3f(nbId, min_d, cap.id_joint));
+					// PT_d("index", cnt + start, pId);
 					cnt++;
 				}
 			}
@@ -276,7 +279,10 @@ namespace dyno
 		if( pId == capPairs.size() - 1 || int(capPairs[pId][0]) != int(capPairs[pId + 1][0]))
 			count[pId] = 1;
 		else 
+		{
+			// printf("[%d, %d] pId:%d\n", int(capPairs[pId][0]), int(capPairs[pId + 1][0]), pId);
 			count[pId] = 0;
+		}
 		
 	}
 
@@ -293,7 +299,7 @@ namespace dyno
 		if( pId == capPairs.size() - 1 || int(capPairs[pId][0]) != int(capPairs[pId + 1][0]))
 		{
 			outPairs[count[pId]] = Pair2(capPairs[pId][2], capPairs[pId][0]);
-			printf("<joint:%d, point:%d>\n", outPairs[count[pId]][0], outPairs[count[pId]][1]);
+			// printf("<joint:%d, point:%d>\n", outPairs[count[pId]][0], outPairs[count[pId]][1]);
 		}
 			
 	}
@@ -340,7 +346,8 @@ namespace dyno
 		cuSynchronize();
 
 		int numPair = m_reduce.accumulate(count.begin(), count.size());
-		
+		m_scan.exclusive(count, true);
+
 		DArray<Pair3f>capJointPairs;
 		capJointPairs.resize(numPair);
 		cuExecute(numCp,
@@ -371,6 +378,7 @@ namespace dyno
 			capJointPairs,
 			count,
 			outPairs);
+		cuSynchronize();
 
 		capJointPairs.clear();
 		count.clear();

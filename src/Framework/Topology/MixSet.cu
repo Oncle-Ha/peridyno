@@ -184,7 +184,7 @@ namespace dyno
 
 		this->setEdges();
         this->getJointVer();
-		this->setVer2T();
+		// this->setVer2T();
     }
 
     template<typename Coord, typename FKey>
@@ -263,6 +263,7 @@ namespace dyno
 	void MixSet<TDataType>::setVer2T()
 	{
 		uint coordSize = m_coords.size();
+		//TODO: 确定elemsize
 		m_ver2Edge.resize(coordSize);
 		m_ver2Tri.resize(coordSize);
 		m_ver2Tet.resize(coordSize);
@@ -309,6 +310,7 @@ namespace dyno
             m_verType,
             m_intersections,
             m_triPointSize);
+		cuSynchronize();
 
         thrust::sort_by_key(thrust::device, coordKeys.begin(), coordKeys.begin() + coordKeys.size(), coordIds.begin());
 
@@ -318,6 +320,7 @@ namespace dyno
             coordKeys,
 			m_verType,
             m_intersections);
+		cuSynchronize();
     }
 
 	template<typename EKey, typename Triangle>
@@ -415,6 +418,7 @@ namespace dyno
 			keys,
 			Ids,
 			m_triangles);
+		cuSynchronize();
 
 		cuExecute(tetSize,
 			MS_SetupTetEdgeKeys,
@@ -422,6 +426,7 @@ namespace dyno
 			Ids,
 			m_tetrahedron,
 			triSize);
+		cuSynchronize();
 		// 去重
 		thrust::sort_by_key(thrust::device, keys.begin(), keys.begin() + keys.size(), Ids.begin());
 
@@ -432,6 +437,7 @@ namespace dyno
 			MS_CountEdgeNumber,
 			counter,
 			keys);
+		cuSynchronize();
 
 		int edgeNum = thrust::reduce(thrust::device, counter.begin(), counter.begin() + counter.size());
 		thrust::exclusive_scan(thrust::device, counter.begin(), counter.begin() + counter.size(), counter.begin());
@@ -444,6 +450,7 @@ namespace dyno
 			keys,
 			counter,
 			Ids);
+		cuSynchronize();
 
 		counter.clear();
 		Ids.clear();
