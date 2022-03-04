@@ -44,7 +44,7 @@ namespace dyno
 		m_coords.resize(m_triPointSize + m_tetPointSize);
 		m_coords.assign(tmp, m_triPointSize, 0, 0);
 		//FIXME bug: assign(vector)
-        // m_coords.assign(pos, m_tetPointSize, m_triPointSize, 0); 
+		// m_coords.assign(pos, m_tetPointSize, m_triPointSize, 0); 
 
         tmp.resize(m_tetPointSize);
         tmp.assign(pos);	

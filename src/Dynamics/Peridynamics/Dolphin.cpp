@@ -4,7 +4,7 @@
 #include "Topology/PointSet.h"
 #include "Topology/MixSet.h"
 #include "Mapping/PointSetToPointSet.h"
-#include "Mapping/CapsuleToMixSet.h"
+// #include "Mapping/CapsuleToMixSet.h"
 #include "Topology/NeighborPointQuery.h"
 #include "Peridynamics/Peridynamics.h"
 #include "SharedFunc.h"
@@ -30,7 +30,7 @@ namespace dyno
 		this->currentVelocity()->connect(peri->inVelocity());
 		this->currentForce()->connect(peri->inForce());
 		this->currentRestShape()->connect(peri->inRestShape());
-		// this->animationPipeline()->pushModule(peri);
+		this->animationPipeline()->pushModule(peri);
 
 		//Create a node for surface mesh rendering
 		m_surfaceNode = this->template createAncestor<Node>("Mesh");
@@ -46,10 +46,13 @@ namespace dyno
 		// surfaceMapping->setTo(triSet);        
 
         // Set the Topology mapping from Capsule(JointTree) to MixSet 
+        // 1.Module.update()
+        // 2.Mapping.apply()
         auto jointMapping = this->template addTopologyMapping<CapsuleToMixSet<TDataType>>("joint_mapping");
         jointMapping->setFrom(&m_jointMap);
         jointMapping->setTo(mixSet);
         jointMapping->setCapsuleRadius(0.0125);
+        jointMapping->outColor()->connect(this->currentColor());
 
     }
 
@@ -87,6 +90,7 @@ namespace dyno
 		if (ptSet == nullptr) return;
 
 		auto pts = ptSet->getPoints();
+        
         // reset Position
 		if (pts.size() > 0)
 		{
@@ -128,19 +132,22 @@ namespace dyno
 		auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
 
         auto& pts = ptSet->getPoints();
-        pts.assign(this->currentPosition()->getData());
+        auto& curPos = this->currentPosition()->getData();
+        pts.assign(curPos);
 
         auto tMappings = this->getTopologyMappingList();
         for(auto iter = tMappings.begin(); iter != tMappings.end(); iter++){
             (*iter)->apply();
         }
 
+        //DEBUG
+        curPos.assign(pts);
     }
     
 	template<typename TDataType>
-	std::shared_ptr<PointSetToPointSet<TDataType>> Dolphin<TDataType>::getTopologyMapping()
+	std::shared_ptr<CapsuleToMixSet<TDataType>> Dolphin<TDataType>::getTopologyMapping()
 	{
-		auto mapping = this->template getModule<PointSetToPointSet<TDataType>>("surface_mapping");
+		auto mapping = this->template getModule<CapsuleToMixSet<TDataType>>("joint_mapping");
 
 		return mapping;
 	}    

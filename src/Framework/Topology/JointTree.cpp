@@ -92,7 +92,7 @@ namespace dyno
 	template<typename TDataType>
     Mat4f JointTree<TDataType>::getTransform(Coord & T, Coord& R, Coord& S)
     {
-		// FIXME
+		// TODO:改为四元数
         Mat4f translation = Mat4f(
             1, 0, 0, T[0],
             0, 1, 0, T[1],
@@ -139,7 +139,9 @@ namespace dyno
             this->GlobalTransform = this->parent->GlobalTransform * this->GlobalTransform;
         else
         {
+            //DEBUG 简单平移
             this->GlobalTransform = getTransform(this->PreTranslation, this->PreRotation, this->PreScaling) * this->GlobalTransform;
+            this->PreTranslation += Coord(0.00001, 0.00001, 0.00001); 
             // float s = 10000;
             // Mat4f scaling= Mat4f(
             // s, 0, 0, 0,

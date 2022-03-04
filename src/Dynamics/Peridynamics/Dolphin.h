@@ -4,6 +4,7 @@
 #include "Topology/PointSet.h"
 #include "Topology/JointTree.h"
 #include "Topology/Cluster.h"
+#include "Mapping/CapsuleToMixSet.h"
 
 namespace dyno
 {
@@ -32,7 +33,7 @@ namespace dyno
 		bool scale(Real s) override;
 
         std::shared_ptr<Node> getSurfaceNode() {return m_surfaceNode;}
-	    std::shared_ptr<PointSetToPointSet<TDataType>> getTopologyMapping();
+	    std::shared_ptr<CapsuleToMixSet<TDataType>> getTopologyMapping();
         
 
 	public:
@@ -44,6 +45,8 @@ namespace dyno
 
 		DEF_EMPTY_CURRENT_ARRAYLIST(NPair, RestShape, DeviceType::GPU, "Storing neighbors");
 
+        //DEBUG
+        DEF_EMPTY_CURRENT_ARRAY(Color, Vec3f, DeviceType::GPU, "Color of point")
         // DEF_INSTANCE_STATE(PointSet<TDataType>, Points, ""); // TODO: remove this
 
         std::vector<std::shared_ptr<JointTree<TDataType>>> m_jointMap;

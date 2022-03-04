@@ -32,6 +32,10 @@ namespace dyno
 		// void match(JointList* from, std::shared_ptr<MixSet<TDataType>> to);
 		void match();
 
+		/**
+		 * @brief Color of neighboring particles
+		 */
+		DEF_ARRAY_OUT(Vec3f, Color, DeviceType::GPU, "Return neighbor ids");
 	protected:
 		bool initializeImpl() override;
 
@@ -40,7 +44,7 @@ namespace dyno
 		Scan m_scan;
 		bool is_body = false;
 		//Searching radius
-		Real m_radius = 0.0125;
+		Real m_radius = 0.125;
 
 	
 		//映射关系
@@ -52,6 +56,7 @@ namespace dyno
 		// std::shared_ptr<JointTree<TDataType>> m_from = nullptr;
 		std::shared_ptr<MixSet<TDataType>> m_to = nullptr;
 		
+	
 		std::vector<Mat4f> m_initInvTransform; // X2 = M2 M1^-1 X1
 
 		// JointList* m_initfrom = nullptr;

@@ -5,10 +5,6 @@
 
 #include <iostream>
 
-#define PT_d(s, x, y) printf("%s: %d  pId: %d\n", s, x, y)
-#define PT_f(s, x, y) printf("%s: %f  pId: %d\n", s, x, y)
-#define PT_e(s, y) printf("[%s]  pId: %d\n", s, y)
-
 namespace dyno
 {
 	template<typename TDataType>
@@ -111,6 +107,7 @@ namespace dyno
 		old_p[1] = tmp_p[1] / tmp_p[3];
 		old_p[2] = tmp_p[2] / tmp_p[3];
 
+		//DEBUG
 		to[point_i] = old_p;
 	}	
 
@@ -243,6 +240,25 @@ namespace dyno
 		pairJoint[pId] = Pair2(list[0][0], tmp_joint);
 	}
 
+	template<typename Vec3f>
+	__global__ void CM_UpdateColor1(
+		DArray<Vec3f> colors)
+	{
+		int pId = threadIdx.x + (blockIdx.x + blockDim.x);
+		if (pId >= colors.size()) return;
+		colors[pId] = Vec3f(0, 0, 0);
+	}
+	
+	template<typename Vec3f, typename Pair2>
+	__global__ void CM_UpdateColor2(
+		DArray<Vec3f> colors,
+		DArray<Pair2> clusters)
+	{
+		int pId = threadIdx.x + (blockIdx.x + blockDim.x);
+		if (pId >= clusters.size()) return;
+		colors[clusters[pId][1]] = Vec3f(0,1,0);
+	}
+
 	template<typename TDataType>
 	void CapsuleToMixSet<TDataType>::match()
 	{
@@ -359,6 +375,24 @@ namespace dyno
 		else
 		{
 			m_pointClusters.assign(p_pairs2);
+			int numPoint = m_to->getAllPoints().size();
+
+			if (this->outColor()->isEmpty())
+				this->outColor()->allocate();
+			auto& out_color = this->outColor()->getData();
+
+			out_color.resize(numPoint);
+			cuExecute(numPoint,
+				CM_UpdateColor1,
+				out_color);
+			cuSynchronize();
+
+			printf("Num of Clusters:%d\n", m_pointClusters.size());
+			cuExecute(m_pointClusters.size(),
+				CM_UpdateColor2,
+				out_color,
+				m_pointClusters);
+			cuSynchronize();			
 		}
 		
 

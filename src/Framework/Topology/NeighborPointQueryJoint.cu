@@ -2,6 +2,10 @@
 #include "Topology/GridHash.h"
 #include <thrust/sort.h>
 
+
+#define PT_d(s, x, y) printf("%s: %d  pId: %d\n", s, x, y)
+#define PT_f(s, x, y) printf("%s: %f  pId: %d\n", s, x, y)
+#define PT_e(s, y) printf("[%s]  pId: %d\n", s, y)
 namespace dyno
 {
 	__constant__ int offset_nq2[27][3] = { 
@@ -67,7 +71,7 @@ namespace dyno
 		int3 vId1 = hash.getIndex3(cap.v1);
 		
 		//DEBUG 
-		// printf("[(%d,%d,%d)->(%d,%d,%d)] pId:%d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
+		printf("[(%d,%d,%d)->(%d,%d,%d)] pId: %d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
 
 		Coord m = cap.v0;
 		Coord s = (cap.v1 - cap.v0);
@@ -77,15 +81,20 @@ namespace dyno
 		int3 vId = vId0;
 		
 		// 线段与立方体求交
+		Coord min_v = hash.getMin3(vId);
 		Coord max_v = hash.getMax3(vId);
-		Coord max_t = (max_v - m) / s;
-		float next_t = min(max_t[0], min(max_t[1], max_t[2])); //边界时间段
+		Coord time1 = (min_v - m) / s;
+		Coord time2 = (max_v - m) / s;
+		Coord max_t(max(time1[0],time2[0]), max(time1[1],time2[1]), max(time1[2],time2[2]));
+		float next_t = min(max_t[0], min(max_t[1], max_t[2]));	//边界时间段	
+		PT_f("time", next_t, pId);
 		while(true)
 		{	
 			int gId = hash.getIndex(vId.x, vId.y, vId.z);
 
 			//DEBUG
 			// PT_d("Gird", gId, pId);
+			printf("Gird:%d [%d,%d,%d] pId: %d\n", gId, vId.x, vId.y, vId.z, pId);
 
 			if (gId == -1) break;
 
@@ -110,6 +119,8 @@ namespace dyno
 
 			float tmp_t = -1;
 			int3 next_c;	
+
+			// FIXME: Grid不全
 			// 选取线段上最近Grid
 			for (int c = 1; c < 27; c++)
 			{
@@ -137,7 +148,7 @@ namespace dyno
 					}
 				}
 			}
-
+			PT_f("time", next_t, pId);
 			if (next_t < 0 || next_t > 1) break;
 			
 			next_t = tmp_t;
@@ -145,7 +156,7 @@ namespace dyno
 		}
 	}
 
-	// max_cap {O(Gird*Point)}
+	// max_cap {O(Gird*Point)} TODO更新同Count一样
 	// 寻找关节所延伸胶囊体控制的顶点
 	template<typename Coord, typename JCapsule, typename TDataType, typename Pair3f>
 	__global__ void K_ComputeNeighbor(
@@ -174,9 +185,13 @@ namespace dyno
 		int3 vId = vId0;
 		
 		// 线段与立方体求交
+		// 线段与立方体求交
+		Coord min_v = hash.getMin3(vId);
 		Coord max_v = hash.getMax3(vId);
-		Coord max_t = (max_v - m) / s;
-		float next_t = min(max_t[0], min(max_t[1], max_t[2])); //边界时间段
+		Coord time1 = (min_v - m) / s;
+		Coord time2 = (max_v - m) / s;
+		Coord max_t(max(time1[0],time2[0]), max(time1[1],time2[1]), max(time1[2],time2[2]));
+		float next_t = min(max_t[0], min(max_t[1], max_t[2]));	//边界时间段
 		int start = count[pId];
 		int cnt = 0;
 		while(true)
@@ -276,7 +291,11 @@ namespace dyno
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= capPairs.size()) return;
 		if( pId == capPairs.size() - 1 || int(capPairs[pId][0]) != int(capPairs[pId + 1][0]))
+		{
 			outPairs[count[pId]] = Pair2(capPairs[pId][2], capPairs[pId][0]);
+			printf("<joint:%d, point:%d>\n", outPairs[count[pId]][0], outPairs[count[pId]][1]);
+		}
+			
 	}
 
 	template<typename TDataType>
@@ -315,7 +334,7 @@ namespace dyno
 			K_CountNeighbor,
 			points,
 			hashGrid,
-			h,
+			h * 10,
 			capsules,
 			count);
 		cuSynchronize();
@@ -328,7 +347,7 @@ namespace dyno
 			K_ComputeNeighbor,
 			points,
 			hashGrid,
-			h,
+			h * 10,
 			capsules,
 			capJointPairs,
 			count);

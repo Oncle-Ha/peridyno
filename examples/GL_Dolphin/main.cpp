@@ -170,14 +170,15 @@ int main()
 	// set point 
 	
 	auto pointRenderer = std::make_shared<GLPointVisualModule>();
-	pointRenderer->setColor(Vec3f(1, 0.2, 1));
-	pointRenderer->setColorMapMode(GLPointVisualModule::PER_OBJECT_SHADER);
-
+	pointRenderer->setColor(Vec3f(1, 0, 0));
+	pointRenderer->setColorMapMode(GLPointVisualModule::PER_VERTEX_SHADER);
+	pointRenderer->setColorMapRange(0, 1);
 	//dolphin->getSurfaceNode()->currentTopology()->connect(pointRenderer->inPointSet());
 	//dolphin->getSurfaceNode()->graphicsPipeline()->pushModule(pointRenderer);
 
 	dolphin->currentTopology()->connect(pointRenderer->inPointSet());
-	dolphin->currentVelocity()->connect(pointRenderer->inColor());
+	// dolphin->currentVelocity()->connect(pointRenderer->inColor());
+	dolphin->currentColor()->connect(pointRenderer->inColor()); //DEBUG
 
 	dolphin->graphicsPipeline()->pushModule(pointRenderer);
 
