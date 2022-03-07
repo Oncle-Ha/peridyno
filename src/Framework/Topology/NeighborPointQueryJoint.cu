@@ -69,9 +69,10 @@ namespace dyno
 		JCapsule cap = caps[pId];
 		int3 vId0 = hash.getIndex3(cap.v0);
 		int3 vId1 = hash.getIndex3(cap.v1);
-		
+		float eps = 1e-6;
+
 		//DEBUG 
-		printf("[(%d,%d,%d)->(%d,%d,%d)] pId: %d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
+		// printf("[(%d,%d,%d)->(%d,%d,%d)] pId: %d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
 
 		Coord m = cap.v0;
 		Coord s = (cap.v1 - cap.v0);
@@ -87,14 +88,14 @@ namespace dyno
 		Coord time2 = (max_v - m) / s;
 		Coord max_t(max(time1[0],time2[0]), max(time1[1],time2[1]), max(time1[2],time2[2]));
 		float next_t = min(max_t[0], min(max_t[1], max_t[2]));	//边界时间段	
-		PT_f("time", next_t, pId);
+		// PT_f("time", next_t, pId);
 		while(true)
 		{	
 			int gId = hash.getIndex(vId.x, vId.y, vId.z);
 
 			//DEBUG
 			// PT_d("Gird", gId, pId);
-			printf("Gird:%d [%d,%d,%d] pId: %d\n", gId, vId.x, vId.y, vId.z, pId);
+			// printf("Gird:%d [%d,%d,%d] pId: %d\n", gId, vId.x, vId.y, vId.z, pId);
 
 			if (gId == -1) break;
 
@@ -114,13 +115,16 @@ namespace dyno
 					for (int i = 0; i < totalNum; i++) {
 						int nbId = hash.getParticleId(cNumId, i);
 						Coord pos_i = position[nbId];
+						
 						Real d_v0 = (pos_i - cap.v0).norm();
 						Real d_v1 = (pos_i - cap.v1).norm();
-						Real d_line = fabs((pos_i - m).dot(s) / d);
-						Real min_d = min(d_v0, min(d_v1, d_line));
+						Real d_t = (pos_i - m).dot(s);
+						Real d_line = fabs(((pos_i - m).cross(s)).norm() / d);
+						Real min_d = (d_t < d * d && d_t > 0)? d_line : min(d_v0, d_v1);
+
 						if (min_d < h)
 						{
-							PT_f("d_line", d_line, pId);
+							// PT_f("d_line", d_line, pId);
 							count[pId] +=1;
 						}
 					}
@@ -130,6 +134,7 @@ namespace dyno
 
 			float tmp_t = -1;
 			int3 next_c;	
+			
 
 			// FIXME: Grid不全
 			// 选取线段上最近Grid
@@ -150,7 +155,10 @@ namespace dyno
 					Coord max_t(max(time1[0],time2[0]), max(time1[1],time2[1]), max(time1[2],time2[2]));
 					float mint = max(min_t[0], max(min_t[1], min_t[2]));
 					float maxt = min(max_t[0], min(max_t[1], max_t[2]));
-					if (mint > 0 && mint < maxt && (mint < tmp_t || tmp_t == -1) && mint >= next_t)
+
+					// printf("GirdTest [%d,%d,%d] - (%f, %f) < (%f) pId: %d\n", cId.x, cId.y, cId.z, mint, maxt, tmp_t, pId);
+					// printf("Checsk( %d )\n", (mint > next_t - eps));
+					if (mint > 0 && mint < 1 && mint < maxt && (mint < tmp_t || tmp_t < 0) && mint > next_t - eps)
 					{
 						tmp_t = maxt;
 						next_c = cId;
@@ -159,10 +167,10 @@ namespace dyno
 					}
 				}
 			}
-			// PT_f("time", next_t, pId);
-			if (next_t < 0 || next_t > 1) break;
 			
 			next_t = tmp_t;
+			// PT_f("time", next_t, pId);
+			if (next_t < 0) break;
 			vId = next_c;
 		}
 		//DEBUG
@@ -186,7 +194,8 @@ namespace dyno
 		JCapsule cap = caps[pId];
 		int3 vId0 = hash.getIndex3(cap.v0);
 		int3 vId1 = hash.getIndex3(cap.v1);
-		
+		float eps = 1e-6;
+
 		//DEBUG 
 		// printf("[(%d,%d,%d)->(%d,%d,%d)] pId:%d\n", vId0.x, vId0.y, vId0.z, vId1.x, vId1.y, vId1.z, pId);
 
@@ -229,13 +238,16 @@ namespace dyno
 					for (int i = 0; i < totalNum; i++) {
 						int nbId = hash.getParticleId(cNumId, i);
 						Coord pos_i = position[nbId];
+
 						Real d_v0 = (pos_i - cap.v0).norm();
 						Real d_v1 = (pos_i - cap.v1).norm();
-						Real d_line = fabs((pos_i - m).dot(s) / d);
-						Real min_d = min(d_v0, min(d_v1, d_line));
+						Real d_t = (pos_i - m).dot(s);
+						Real d_line = fabs(((pos_i - m).cross(s)).norm() / d);
+						Real min_d = (d_t < d * d && d_t > 0)? d_line : min(d_v0, d_v1);
+
 						if (min_d < h)
 						{
-							PT_f("MIN", min_d, pId);
+							// PT_f("MIN", min_d, pId);
 							// printf("<id:%d dis:%f joint:%d>  pId:%d\n", nbId, min_d, cap.id_joint, pId);
 							capPairs[cnt + start] = (Pair3f(nbId, min_d, cap.id_joint));
 							// PT_d("index", cnt + start, pId);
@@ -267,7 +279,7 @@ namespace dyno
 					Coord max_t(max(time1[0],time2[0]), max(time1[1],time2[1]), max(time1[2],time2[2]));
 					float mint = max(min_t[0], max(min_t[1], min_t[2]));
 					float maxt = min(max_t[0], min(max_t[1], max_t[2]));
-					if (mint > 0 && mint < maxt && (mint < tmp_t || tmp_t == -1) && mint >= next_t)
+					if (mint > 0 && mint < 1 && mint < maxt && (mint < tmp_t || tmp_t < 0) && mint > next_t - eps)
 					{
 						tmp_t = maxt;
 						next_c = cId;
@@ -277,9 +289,9 @@ namespace dyno
 				}
 			}
 
-			if (next_t < 0 || next_t > 1) break;
-			
 			next_t = tmp_t;
+			// PT_f("time", next_t, pId);
+			if (next_t < 0) break;
 			vId = next_c;
 		}
 	}

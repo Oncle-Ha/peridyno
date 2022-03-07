@@ -127,11 +127,11 @@ namespace dyno
 		}
 		GlTransform.assign(p_transform);
 
-		// FIXME: 四面体和三角面片重合点会无法复原
-		// TODO: 改为只控制顶点
+		
         // Animation
 		if(is_body)
 		{
+			// FIXME: 四面体和三角面片重合点会无法复原
 			cuExecute(m_triClusters.size(),
 				CM_ApplyTransformTri,
 				m_triClusters,
