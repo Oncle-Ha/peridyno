@@ -3,6 +3,8 @@
 
 #include <iterator>
 #include <random>
+
+#include "Quat.h"
 namespace dyno
 {
 
@@ -31,6 +33,7 @@ namespace dyno
         std::default_random_engine generator;
         std::normal_distribution<double> dist;
         
+
 	public:
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
@@ -46,7 +49,8 @@ namespace dyno
         void translate(Coord t);
         void getGlobalTransform();
         Mat4f getTransform(Coord & T, Coord& R, Coord& S);
-        
+		void getQuat(Coord &T, Coord &R, Coord &S);
+        void getGlobalTransform2();
         
         unsigned long long id;
         // 用于对整个模型进行调整
@@ -54,12 +58,22 @@ namespace dyno
         Coord PreScaling;
 		Coord PreTranslation;
 
+		Coord tmp;
+
         Coord LclTranslation;   // Local Joint's coord
         Coord LclRotation;
         Coord LclScaling; 
         Coord GlCoord;          // Global Joint's coord 
         Mat4f GlobalTransform;
         bool RotationActive;
+
+        // Quat<Real> LclT;
+        // Quat<Real> LclR;
+        // Quat<Real> LclS;
+
+        Quat<Real> GlT;
+        Quat<Real> GlR;
+        Quat<Real> GlS;
         std::vector<std::shared_ptr<JointTree>> children;
         std::shared_ptr<JointTree> parent;
 		

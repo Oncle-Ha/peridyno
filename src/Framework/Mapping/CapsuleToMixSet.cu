@@ -272,6 +272,7 @@ namespace dyno
 			joint->getGlobalTransform();
 			Vec4f tmp = joint->GlobalTransform * Vec4f(0, 0, 0, 1) ;
 			joint->GlCoord = Coord(tmp[0] / tmp[3], tmp[1] / tmp[3], tmp[2] / tmp[3]);
+			// 求逆误差? 
 			m_initInvTransform.push_back(joint->GlobalTransform.inverse());
 			std::cerr << for_cnt  <<" :  " <<joint->GlCoord[0] << ", " << joint->GlCoord[1] << ", " << joint->GlCoord[2] << "\n";
 		}

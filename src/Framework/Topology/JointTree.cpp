@@ -21,6 +21,11 @@ namespace dyno
         LclRotation = Coord(0);
         LclScaling = Coord(1);
 		
+        tmp = Coord(0, 0, 0);
+
+        GlT = Quat<Real>(0, 0, 0, 0);
+        GlR = Quat<Real>(0, 0, 0, 0);
+        GlS = Quat<Real>(0, 0, 0, 0);
     }
     
     template<typename TDataType>
@@ -29,66 +34,6 @@ namespace dyno
 
     }
 
-    // TODO Local
-    // Matrix Object::evalLocal(const Vec3& translation, const Vec3& rotation) const
-    // {
-    //     return evalLocal(translation, rotation, getLocalScaling());
-    // }
-
-
-    // Matrix Object::evalLocal(const Vec3& translation, const Vec3& rotation, const Vec3& scaling) const
-    // {
-    //     Vec3 rotation_pivot = getRotationPivot();
-    //     Vec3 scaling_pivot = getScalingPivot();
-    //     RotationOrder rotation_order = getRotationOrder();
-
-    //     Matrix s = makeIdentity();
-    //     s.m[0] = scaling.x;
-    //     s.m[5] = scaling.y;
-    //     s.m[10] = scaling.z;
-
-    //     Matrix t = makeIdentity();
-    //     setTranslation(translation, &t);
-
-    //     Matrix r = getRotationMatrix(rotation, rotation_order);
-    //     Matrix r_pre = getRotationMatrix(getPreRotation(), RotationOrder::EULER_XYZ);
-    //     Matrix r_post_inv = getRotationMatrix(-getPostRotation(), RotationOrder::EULER_ZYX);
-
-    //     Matrix r_off = makeIdentity();
-    //     setTranslation(getRotationOffset(), &r_off);
-
-    //     Matrix r_p = makeIdentity();
-    //     setTranslation(rotation_pivot, &r_p);
-
-    //     Matrix r_p_inv = makeIdentity();
-    //     setTranslation(-rotation_pivot, &r_p_inv);
-
-    //     Matrix s_off = makeIdentity();
-    //     setTranslation(getScalingOffset(), &s_off);
-
-    //     Matrix s_p = makeIdentity();
-    //     setTranslation(scaling_pivot, &s_p);
-
-    //     Matrix s_p_inv = makeIdentity();
-    //     setTranslation(-scaling_pivot, &s_p_inv);
-
-    //     // http://help.autodesk.com/view/FBX/2017/ENU/?guid=__files_GUID_10CDD63C_79C1_4F2D_BB28_AD2BE65A02ED_htm
-    //     return t * r_off * r_p * r_pre * r * r_post_inv * r_p_inv * s_off * s_p * s * s_p_inv;
-    // }
-
-    // Matrix Object::getGlobalTransform() const
-    // {
-    //     const Object* parent = getParent();
-    //     if (!parent) return evalLocal(getLocalTranslation(), getLocalRotation());
-
-    //     return parent->getGlobalTransform() * evalLocal(getLocalTranslation(), getLocalRotation());
-    // }
-
-
-    // Matrix Object::getLocalTransform() const
-    // {
-    //     return evalLocal(getLocalTranslation(), getLocalRotation(), getLocalScaling());
-    // }
 
 	template<typename TDataType>
     Mat4f JointTree<TDataType>::getTransform(Coord & T, Coord& R, Coord& S)
@@ -100,6 +45,8 @@ namespace dyno
             0, 0, 1, T[2],
             0, 0, 0, 1);
         
+        // R[X,Y,Z] -> [Z,X,Y]轴
+
         double X = R[0];
         Mat4f rotation_x = Mat4f(
             1, 0, 0, 0,
@@ -142,23 +89,62 @@ namespace dyno
         {
             //DEBUG 简单平移
             this->GlobalTransform = getTransform(this->PreTranslation, this->PreRotation, this->PreScaling) * this->GlobalTransform;
-             
-            Coord tmp_d(0,0,0);
-            for (int i = 0; i < 3; ++i)
-                tmp_d[i] += dist(generator)  * 0.0005;
-            this->PreTranslation += tmp_d;
             
-            // float s = 10000;
-            // Mat4f scaling= Mat4f(
-            // s, 0, 0, 0,
-            // 0, s, 0, 0,
-            // 0, 0, s, 0,
-            // 0, 0, 0, 1);
-            // this->GlobalTransform = scaling * this->GlobalTransform;
+            // T
+            Coord tmp_t(0,0,0);
+            for (int i = 0; i < 3; ++i)
+                tmp_t[i] += dist(generator)  * 0.0005;
+            // this->PreTranslation += tmp_t;
+            
+            // R
+            this->PreRotation += tmp;
+
+            tmp = Coord(0);
+
         }
             
     }
 
+    template<typename TDataType>
+    void JointTree<TDataType>::getQuat(Coord &T, Coord &R, Coord &S)
+    {
+
+        // Scaling
+        Quat<Real> s(S[0], S[1], S[2], 0.f);
+        // Translation
+        Quat<Real> t(T[0], T[1], T[2], 0.f);
+        // Rotate X
+        Quat<Real> q_x(R[0], Vec3f(1.f, 0.f, 0.f));
+        Quat<Real> q_y(R[1], Vec3f(0.f, 1.f, 0.f));
+        Quat<Real> q_z(R[2], Vec3f(0.f, 0.f, 1.f));
+        
+        GlT = GlT + GlS * GlR * t * GlR.conjugate();
+        GlS = GlS * s;
+        GlR = GlR * (q_x * q_y * q_z);
+
+        // TODO:
+        // GlR.normalize(); 
+    }
+
+    // 遍历关节层次时，顺便更新
+	template<typename TDataType>
+    void JointTree<TDataType>::getGlobalTransform2()
+    {
+        if(this->parent != nullptr)
+        {
+            this->GlT = this->parent->GlT;
+            this->GlS = this->parent->GlS;
+            this->GlR = this->parent->GlR;
+            getQuat(this->LclTranslation, this->LclRotation, this->LclScaling);
+        }else
+        {
+            this->GlT = Quat<Real>(0.f, 0.f, 0.f, 0.f);
+            this->GlS = Quat<Real>(1.f, 1.f, 1.f, 0.f);
+            this->GlR = Quat<Real>(0.f, 0.f, 0.f, 1.f);
+            getQuat(this->PreTranslation, this->PreRotation, this->PreScaling);
+            getQuat(this->LclTranslation, this->LclRotation, this->LclScaling);
+        }
+    }
 
     template<typename TDataType>
     void JointTree<TDataType>::copyFrom(JointTree<TDataType> jointTree)
