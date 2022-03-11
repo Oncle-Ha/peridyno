@@ -18,6 +18,7 @@
 
 namespace dyno 
 {
+	// return Neighbor Ids
 	template<typename TDataType>
 	class NeighborPointQuery : public ComputeModule
 	{

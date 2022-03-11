@@ -40,6 +40,8 @@ public:
 	typedef VectorND<PointType, 2>	Tri2Tet;
 	typedef VectorND<PointType, 4>	Tet2Tri;
 	
+	typedef VectorND<PointType, 2> Pair2;
+	typedef VectorND<PointType, 3> Pair3;
 public:
 	TopologyModule();
 	~TopologyModule() override;

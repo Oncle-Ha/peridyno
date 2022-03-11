@@ -26,6 +26,16 @@ namespace dyno{
 
 		void release();
 
+		GPU_FUNC inline Coord getMin3(int3 x)
+		{
+			return Coord(lo[0] + x.x * ds, lo[1] + x.y * ds, lo[2] + x.z * ds);
+		}
+
+		GPU_FUNC inline Coord getMax3(int3 x)
+		{
+			return Coord(lo[0] + x.x * ds + ds, lo[1] + x.y * ds + ds, lo[2] + x.z * ds + ds);
+		}
+
 		GPU_FUNC inline int getIndex(int i, int j, int k)
 		{
 			if (i < 0 || i >= nx) return INVALID;

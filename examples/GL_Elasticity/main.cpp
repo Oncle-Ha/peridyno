@@ -22,10 +22,13 @@ int main()
 	auto bunny = scn->addNode(std::make_shared<ElasticBody<DataType3f>>());
 	bunny->connect(root->importParticleSystems());
 
-	bunny->loadParticles("../../data/bunny/bunny_points.obj");
-	bunny->loadSurface("../../data/bunny/bunny_mesh.obj");
-	bunny->scale(1.0f);
-	bunny->translate(Vec3f(0.5f, 0.1f, 0.5f));
+	bunny->setMass(1.0);
+	// bunny->loadParticles("../../data/bunny/bunny_points.obj");
+	// bunny->loadSurface("../../data/bunny/bunny_mesh.obj");
+	bunny->loadParticles("../../data/dolphin/Dolphin_points.obj");
+	bunny->loadSurface("../../data/dolphin/Dolphin_surface.obj");	
+	bunny->scale(0.2f);
+	bunny->translate(Vec3f(0.5f, 0.05f, 0.5f));
 	bunny->setVisible(true);
 
 	auto pointRenderer = std::make_shared<GLPointVisualModule>();
