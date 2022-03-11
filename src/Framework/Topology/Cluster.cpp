@@ -3,7 +3,7 @@
 
 namespace dyno
 {
-    // IMPLEMENT_CLASS_1(Cluster, TDataType)
+    // IMPLEMENT_TCLASS(Cluster, TDataType)
     template<typename TDataType>
     Cluster<TDataType>::Cluster()
     {

@@ -17,7 +17,7 @@ namespace dyno
     template<typename TDataType>
 	class Dolphin : public ParticleSystem<TDataType>
     {
-        DECLARE_CLASS_1(Dolphin, TDataType)
+        DECLARE_TCLASS(Dolphin, TDataType)
 
     public:
 		typedef typename TDataType::Real Real;

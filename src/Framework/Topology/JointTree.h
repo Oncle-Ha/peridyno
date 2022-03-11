@@ -29,7 +29,7 @@ namespace dyno
     template<typename TDataType>
 	class JointTree : public TopologyModule
 	{ 
-        DECLARE_CLASS_1(JointTree, TDataType)
+        DECLARE_TCLASS(JointTree, TDataType)
     private:
         std::default_random_engine generator;
         std::normal_distribution<double> dist;

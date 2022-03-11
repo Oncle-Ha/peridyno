@@ -7,7 +7,7 @@
 
 namespace dyno
 {
-    IMPLEMENT_CLASS_1(JointTree, TDataType)
+    IMPLEMENT_TCLASS(JointTree, TDataType)
     
     template<typename TDataType>
     JointTree<TDataType>::JointTree()

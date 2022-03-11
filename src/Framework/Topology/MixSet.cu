@@ -7,7 +7,7 @@
 
 namespace dyno
 {
-    IMPLEMENT_CLASS_1(MixSet, TDataType)
+    IMPLEMENT_TCLASS(MixSet, TDataType)
 
     template<typename TDataType>
     MixSet<TDataType>::MixSet()

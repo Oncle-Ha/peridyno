@@ -10,7 +10,7 @@ namespace dyno
     template<typename TDataType>
 	class Cluster
 	{ 
-        // DECLARE_CLASS_1(Cluster, TDataType)
+        // DECLARE_TCLASS(Cluster, TDataType)
 	public:
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;

@@ -38,7 +38,7 @@ namespace dyno
 		-1, -1, -1
 	};
 
-	IMPLEMENT_CLASS_1(NeighborPointQueryJoint, TDataType)
+	IMPLEMENT_TCLASS(NeighborPointQueryJoint, TDataType)
 
 	template<typename TDataType>
 	NeighborPointQueryJoint<TDataType>::NeighborPointQueryJoint()

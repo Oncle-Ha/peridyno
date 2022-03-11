@@ -8,7 +8,7 @@ namespace dyno
 	template<typename TDataType>
 	class NeighborPointQueryJoint : public ComputeModule
 	{
-		DECLARE_CLASS_1(NeighborPointQueryJoint, TDataType)
+		DECLARE_TCLASS(NeighborPointQueryJoint, TDataType)
 	public:
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;

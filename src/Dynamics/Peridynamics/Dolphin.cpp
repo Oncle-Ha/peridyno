@@ -11,7 +11,7 @@
 
 namespace dyno
 {
-    IMPLEMENT_CLASS_1(Dolphin, TDataType)
+    IMPLEMENT_TCLASS(Dolphin, TDataType)
 
     template<typename TDataType>
     Dolphin<TDataType>::Dolphin(std::string name)
@@ -26,16 +26,18 @@ namespace dyno
 
 		auto peri = std::make_shared<Peridynamics<TDataType>>();
 		this->varTimeStep()->connect(peri->inTimeStep());
-		this->currentPosition()->connect(peri->inPosition());
-		this->currentVelocity()->connect(peri->inVelocity());
-		this->currentForce()->connect(peri->inForce());
+		this->statePosition()->connect(peri->inPosition());
+		this->stateVelocity()->connect(peri->inVelocity());
+		this->stateForce()->connect(peri->inForce());
 		this->currentRestShape()->connect(peri->inRestShape());
 		this->animationPipeline()->pushModule(peri);// 暂时只控制点集
 
 		//Create a node for surface mesh rendering
-		m_surfaceNode = this->template createAncestor<Node>("Mesh");
-
-		auto triSet = m_surfaceNode->template setTopologyModule<TriangleSet<TDataType>>("surface_mesh");
+		// m_surfaceNode = this->template createAncestor<Node>("Mesh");
+        m_surfaceNode = std::make_shared<Node>("Mesh");
+        
+		// auto triSet = m_surfaceNode->template setTopologyModule<TriangleSet<TDataType>>("surface_mesh");
+        auto triSet = std::make_shared<TriangleSet<TDataType>>();
 		m_surfaceNode->currentTopology()->setDataPtr(triSet);
 
 		//Set the topology mapping from MixSet to TriangleSet
@@ -98,31 +100,31 @@ namespace dyno
         // reset Position
 		if (pts.size() > 0)
 		{
-			this->currentPosition()->setElementCount(pts.size());
-			this->currentVelocity()->setElementCount(pts.size());
-			this->currentForce()->setElementCount(pts.size());
+			this->statePosition()->setElementCount(pts.size());
+			this->stateVelocity()->setElementCount(pts.size());
+			this->stateForce()->setElementCount(pts.size());
 
-			this->currentPosition()->getData().assign(pts);
-			this->currentVelocity()->getDataPtr()->reset();
+			this->statePosition()->getData().assign(pts);
+			this->stateVelocity()->getDataPtr()->reset();
 		}
 		Node::resetStates();        
 
         //Update Neighbor & RefPosition
 		auto nbrQuery = std::make_shared<NeighborPointQuery<TDataType>>();
  		this->varHorizon()->connect(nbrQuery->inRadius());
- 		this->currentPosition()->connect(nbrQuery->inPosition());
+ 		this->statePosition()->connect(nbrQuery->inPosition());
 		nbrQuery->update();
 
-		if (!this->currentPosition()->isEmpty())
+		if (!this->statePosition()->isEmpty())
 		{
 			this->currentRestShape()->allocate();
 			auto nbrPtr = this->currentRestShape()->getDataPtr();
 			nbrPtr->resize(nbrQuery->outNeighborIds()->getData());
             
-			constructRestShape(*nbrPtr, nbrQuery->outNeighborIds()->getData(), this->currentPosition()->getData());
+			constructRestShape(*nbrPtr, nbrQuery->outNeighborIds()->getData(), this->statePosition()->getData());
 
 			this->currentReferencePosition()->allocate();
-			this->currentReferencePosition()->getDataPtr()->assign(this->currentPosition()->getData());
+			this->currentReferencePosition()->getDataPtr()->assign(this->statePosition()->getData());
 
 			this->currentNeighborIds()->allocate();
 			this->currentNeighborIds()->getDataPtr()->assign(nbrQuery->outNeighborIds()->getData());
@@ -136,7 +138,7 @@ namespace dyno
 		auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
 
         auto& pts = ptSet->getPoints();
-        auto& curPos = this->currentPosition()->getData();
+        auto& curPos = this->statePosition()->getData();
         pts.assign(curPos);
 
         //DEBUG
