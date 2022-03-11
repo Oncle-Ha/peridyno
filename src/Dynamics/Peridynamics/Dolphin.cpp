@@ -30,7 +30,7 @@ namespace dyno
 		this->currentVelocity()->connect(peri->inVelocity());
 		this->currentForce()->connect(peri->inForce());
 		this->currentRestShape()->connect(peri->inRestShape());
-		this->animationPipeline()->pushModule(peri);
+		this->animationPipeline()->pushModule(peri);// 暂时只控制点集
 
 		//Create a node for surface mesh rendering
 		m_surfaceNode = this->template createAncestor<Node>("Mesh");
@@ -52,8 +52,9 @@ namespace dyno
         jointMapping->setFrom(&m_jointMap);
         jointMapping->setTo(mixSet);
         // jointMapping->setCapsuleRadius(0.0125);
-        jointMapping->setCapsuleRadius(0.055);
-		// jointMapping->setCapsuleRadius(0.0325);
+		jointMapping->setCapsuleRadius(0.0325);
+        // jointMapping->setCapsuleRadius(0.055);
+        // jointMapping->setCapsuleRadius(0.085);
         this->currentColor()->connect(jointMapping->outColor());
         // jointMapping->outColor()->connect(this->currentColor());
 
@@ -138,10 +139,18 @@ namespace dyno
         auto& curPos = this->currentPosition()->getData();
         pts.assign(curPos);
 
+        //DEBUG
+        for (auto joint : m_jointMap)
+        {
+            joint->applyAnimationAll(this->varElapsedTime()->getData());
+            // joint->applyAnimationAll(0.05);
+        }
+
         auto tMappings = this->getTopologyMappingList();
         for(auto iter = tMappings.begin(); iter != tMappings.end(); iter++){
             (*iter)->apply();
         }
+        
 
         //DEBUG
         curPos.assign(pts);

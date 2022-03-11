@@ -16,6 +16,8 @@ namespace dyno
 		typedef typename TDataType::Coord Coord;
 		typedef typename TopologyModule::Pair2 Pair2;
 		typedef typename TopologyModule::Pair3 Pair3;
+		typedef typename Mat4f Mat;
+
 		typedef std::vector<std::shared_ptr<JointTree<typename TDataType>>> JointList;
 
 		CapsuleToMixSet();
@@ -57,8 +59,11 @@ namespace dyno
 		std::shared_ptr<MixSet<TDataType>> m_to = nullptr;
 		
 	
-		std::vector<Mat4f> m_initInvTransform; // X2 = M2 M1^-1 X1
-
+		std::vector<Mat> m_initInvTransform; // X2 = M2 M1^-1 X1
+		DArray<Quat<Real>> m_initQuatT;			
+		DArray<Quat<Real>> m_initQuatR;
+		DArray<Real> m_initS;
+		
 		// JointList* m_initfrom = nullptr;
 		// std::shared_ptr<JointTree<TDataType>> m_initFrom = nullptr;
 		// std::shared_ptr<MixSet<TDataType>> m_initTo = nullptr;

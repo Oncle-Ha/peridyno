@@ -1711,6 +1711,18 @@ struct AnimationCurveNodeImpl : AnimationCurveNode
 		return bone;
 	}
 
+	float getAnimationDX() const
+	{
+		return default_values[0];
+	}	
+	float getAnimationDY() const
+	{
+		return default_values[1];
+	}
+	float getAnimationDZ() const
+	{
+		return default_values[2];
+	}
 
 	const AnimationCurve* getCurve(int idx) const override {
 		assert(idx >= 0 && idx < 3);
@@ -3458,6 +3470,7 @@ Matrix Object::evalLocal(const Vec3& translation, const Vec3& rotation, const Ve
 	// http://help.autodesk.com/view/FBX/2017/ENU/?guid=__files_GUID_10CDD63C_79C1_4F2D_BB28_AD2BE65A02ED_htm
 	return t * r_off * r_p * r_pre * r * r_post_inv * r_p_inv * s_off * s_p * s * s_p_inv;
 }
+
 
 
 Vec3 Object::getLocalTranslation() const

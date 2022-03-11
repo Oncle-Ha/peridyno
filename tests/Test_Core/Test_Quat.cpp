@@ -94,6 +94,15 @@ Vec3f getVec3fQ(Vec3f x,  Quat<float> &GlT, float &GlS, Quat<float> &GlR)
 	return Vec3f(tmp_p.x, tmp_p.y, tmp_p.z);
 }
 
+Vec3f getVec3fQInv(Vec3f x,  Quat<float> &GlT, float &GlS, Quat<float> &GlR)
+{
+	Quat<float> tmp_p(x[0], x[1], x[2], 0);
+	
+	tmp_p = (1. / GlS) * GlR.conjugate() * (tmp_p - GlT) *  GlR;
+
+	return Vec3f(tmp_p.x, tmp_p.y, tmp_p.z);
+}
+
 const int N = 3;
 
 TEST(Quat, func)
@@ -137,23 +146,44 @@ TEST(Quat, func)
 		Vec3f x(0.f, 0.f, 0.f);
 		Vec3f xq = getVec3fQ(x, GlT[i], GlS[i], GlR[i]);
 		Vec3f xm = getVec3fM(x, Transform[i]);
+
+		// inverse
+		Mat4f invM = Transform[i].inverse();
+		Vec3f ym = getVec3fM(xm, invM);
+		Vec3f yq = getVec3fQInv(xq, GlT[i], GlS[i], GlR[i]);		
 		EXPECT_EQ( (xq - xm).norm() < 1e-5, true);
+		EXPECT_EQ( (x - ym).norm() < 1e-5, true);
+		EXPECT_EQ( (x - yq).norm() < 1e-5, true);		
+		EXPECT_EQ( (x - yq).norm() < (x - ym).norm(), true);	
 	}
 
 	//Random
 	for(int i = 0; i < N; ++i)
 	{
+		int count = 0;
 		for(int _ = 0; _ < 10000; ++_)
 		{
 			Vec3f x;
 			for (int j = 0; j < 3; ++j)
-				x[j] = (rand() % 10) / 100.0f;
+				x[j] = (rand() % 1000) / 10000000.0f;
 			Quat<float> tmpR(Transform[i]);
 			Vec3f xq = getVec3fQ(x, GlT[i], GlS[i], GlR[i]);
-			Vec3f xqm = getVec3fQ(x, GlT[i], GlS[i], tmpR);
-			Vec3f xmq = getVec3fM(x, GlR[i].toMatrix4x4());
+			// Vec3f xqm = getVec3fQ(x, GlT[i], GlS[i], tmpR);
+			// Vec3f xmq = getVec3fM(x, GlR[i].toMatrix4x4());
 			Vec3f xm = getVec3fM(x, Transform[i]);
+
+			// inverse
+			Mat4f invM = Transform[i].inverse();
+			Vec3f ym = getVec3fM(xm, invM);
+			Vec3f yq = getVec3fQInv(xq, GlT[i], GlS[i], GlR[i]);
+			float disym = (x - ym).norm();
+			float disyq = (x - yq).norm();
+			count += (disyq < disym);
 			EXPECT_EQ( (xq - xm).norm() < 1e-5, true);
+			EXPECT_EQ( (x - ym).norm() < 1e-5, true);
+			EXPECT_EQ( (x - yq).norm() < 1e-5, true);
+			//EXPECT_EQ( disq < dism, true);	
 		}
+		printf("%f\%\n", count / 100.);
 	}
 }

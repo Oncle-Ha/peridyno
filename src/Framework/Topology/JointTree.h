@@ -1,6 +1,7 @@
 #pragma once
 #include "Module/TopologyModule.h"
 
+#include "AnimationCurve.h"
 #include <iterator>
 #include <random>
 
@@ -37,8 +38,8 @@ namespace dyno
 	public:
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
-		typedef typename TDataType::Matrix Matrix;
-
+		typedef typename TDataType::Matrix Matrix; 
+		typedef typename Mat4f Mat;
         
         JointTree();
         ~JointTree();
@@ -48,10 +49,20 @@ namespace dyno
         void scale(Real s);
         void translate(Coord t);
         void getGlobalTransform();
-        Mat4f getTransform(Coord & T, Coord& R, Coord& S);
-		void getQuat(Coord &T, Coord &R, Coord &S);
-        void getGlobalTransform2();
+        Mat getTransform(Coord & T, Coord& R, Coord& S);
+		void getQuat(Coord &T, Coord &R, float &S);
+        void getGlobalQuat();
+		Coord getCoordByMatrix(Coord X);
+		Coord getCoordByQuat(Coord X);
         
+        void setAnimTranslation(std::shared_ptr<AnimationCurve<TDataType>> t) {AnimTranslation = t;}
+        void setAnimRotation(std::shared_ptr<AnimationCurve<TDataType>> r) {AnimRotation = r;}
+        void setAnimScaling(std::shared_ptr<AnimationCurve<TDataType>> s) {AnimScaling = s;}
+
+        // 更新动画
+        void applyAnimationByOne(Coord& init, Coord& cur, std::shared_ptr<AnimationCurve<TDataType>>& anim, Real ptime);
+        void applyAnimationAll(Real ptime);
+
         unsigned long long id;
         // 用于对整个模型进行调整
         Coord PreRotation;
@@ -63,17 +74,22 @@ namespace dyno
         Coord LclTranslation;   // Local Joint's coord
         Coord LclRotation;
         Coord LclScaling; 
-        Coord GlCoord;          // Global Joint's coord 
-        Mat4f GlobalTransform;
-        bool RotationActive;
 
-        // Quat<Real> LclT;
-        // Quat<Real> LclR;
-        // Quat<Real> LclS;
+        std::shared_ptr<AnimationCurve<TDataType>> AnimTranslation;    // Local Animation
+        std::shared_ptr<AnimationCurve<TDataType>> AnimRotation;
+        std::shared_ptr<AnimationCurve<TDataType>> AnimScaling;
+
+        Coord CurTranslation;   // Current Joint's Transform (Animation)
+        Coord CurRotation;
+        Coord CurScaling; 
+
+        Coord GlCoord;          // Global Joint's coord 
+        Mat GlobalTransform;
+        bool RotationActive;
 
         Quat<Real> GlT;
         Quat<Real> GlR;
-        Quat<Real> GlS;
+        Real GlS;
         std::vector<std::shared_ptr<JointTree>> children;
         std::shared_ptr<JointTree> parent;
 		

@@ -35,10 +35,10 @@ namespace dyno
 		return true;
 	}
 
-	template<typename Pair2, typename Mat4f, typename Triangle, typename Coord>
+	template<typename Pair2, typename Mat, typename Triangle, typename Coord>
 	__global__ void CM_ApplyTransformTri(
 		DArray<Pair2> clusters,
-		DArray<Mat4f> transform,
+		DArray<Mat> transform,
 		DArray<Triangle> tris,
 		DArray<Coord> to)
 	{
@@ -60,10 +60,10 @@ namespace dyno
 		}
 	}
 
-	template<typename Pair2, typename Mat4f, typename Tetrahedron, typename Coord>
+	template<typename Pair2, typename Mat, typename Tetrahedron, typename Coord>
 	__global__ void CM_ApplyTransformTet(
 		DArray<Pair2> clusters,
-		DArray<Mat4f> transform,
+		DArray<Mat> transform,
 		DArray<Tetrahedron> tets,
 		DArray<Coord> to)
 	{
@@ -85,10 +85,10 @@ namespace dyno
 		}
 	}	
 
-	template<typename Pair2, typename Mat4f, typename Coord>
+	template<typename Pair2, typename Mat, typename Coord>
 	__global__ void CM_ApplyTransformPoint(
 		DArray<Pair2> clusters,
-		DArray<Mat4f> transform,
+		DArray<Mat> transform,
 		DArray<Coord> to)
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -110,52 +110,154 @@ namespace dyno
 		to[point_i] = old_p;
 	}	
 
+
+	template<typename Pair2, typename Coord, typename Real, template<typename Real> typename Quat>
+	__global__ void CM_ApplyTransformPointByQuat(
+		DArray<Pair2> clusters,
+		DArray<Quat<Real>> initT,
+		DArray<Quat<Real>> initR,
+		DArray<Real> initS,
+		DArray<Quat<Real>> T,
+		DArray<Quat<Real>> R,
+		DArray<Real> S,
+		DArray<Coord> to)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= clusters.size()) return;
+		auto& couple = clusters[pId];
+		int p = couple[1]; // point
+		int j = couple[0]; // joint
+		// PT_d("point", point_i, pId);
+		// PT_d("joint", couple[0], pId);
+		Coord old_p = to[p];
+		Quat<Real> tmp_p(old_p[0], old_p[1], old_p[2], 0);
+		
+		tmp_p = (1. / initS[j]) * initR[j].conjugate() * (tmp_p - initT[j]) * initR[j];
+		tmp_p = S[j] * R[j] * tmp_p * R[j].conjugate() + T[j];
+
+		// PT_f("tmp3", tmp_p[3], pId);
+
+		to[p] = Coord(tmp_p.x, tmp_p.y, tmp_p.z);
+	}	
+
 	template<typename TDataType>
 	bool CapsuleToMixSet<TDataType>::apply()
 	{
-		uint pDim = cudaGridSize(m_to->getPoints().size(), BLOCK_SIZE);
-        
-		std::vector<Mat4f> p_transform;
-		DArray<Mat4f> GlTransform;
-		GlTransform.resize(m_from->size());
-
-		for (int i = 0; i < m_from->size(); ++i)
-		{
-			auto& joint = (*m_from)[i];
-			joint->getGlobalTransform();
-			p_transform.push_back(joint->GlobalTransform * m_initInvTransform[i]);
-		}
-		GlTransform.assign(p_transform);
-
+		// uint pDim = cudaGridSize(m_to->getPoints().size(), BLOCK_SIZE);
+	
 		
-        // Animation
-		if(is_body)
+		// Matrix
+		/*
 		{
-			// FIXME: 四面体和三角面片重合点会无法复原
-			cuExecute(m_triClusters.size(),
-				CM_ApplyTransformTri,
-				m_triClusters,
-				GlTransform,
-				m_to->getTriangles(),
-				m_to->getAllPoints());
-			cuSynchronize();
+			std::vector<Mat> p_transform;
+			std::vector<Mat> p_nextInvTransform;
+			DArray<Mat> GlTransform;
+			GlTransform.resize(m_from->size());
+			for (int i = 0; i < m_from->size(); ++i)
+			{
+				auto& joint = (*m_from)[i];
+				joint->getGlobalTransform();
+				p_nextInvTransform.push_back(joint->GlobalTransform.inverse());
+				p_transform.push_back(joint->GlobalTransform * m_initInvTransform[i]);
+			}
+			GlTransform.assign(p_transform);
 		
-			cuExecute(m_tetClusters.size(),
-				CM_ApplyTransformTet,
-				m_tetClusters,
-				GlTransform,
-				m_to->getTetrahedrons(),
-				m_to->getAllPoints());
-			cuSynchronize();
+			// Animation(Matrix)
+			if(is_body)
+			{
+				// FIXME: 四面体和三角面片重合点会无法复原
+				cuExecute(m_triClusters.size(),
+					CM_ApplyTransformTri,
+					m_triClusters,
+					GlTransform,
+					m_to->getTriangles(),
+					m_to->getAllPoints());
+				cuSynchronize();
+			
+				cuExecute(m_tetClusters.size(),
+					CM_ApplyTransformTet,
+					m_tetClusters,
+					GlTransform,
+					m_to->getTetrahedrons(),
+					m_to->getAllPoints());
+				cuSynchronize();
+			}
+			else
+			{
+				cuExecute(m_pointClusters.size(),
+					CM_ApplyTransformPoint,
+					m_pointClusters,
+					GlTransform,
+					m_to->getAllPoints());
+				cuSynchronize();
+			}
+
+			m_initInvTransform.assign(p_nextInvTransform.begin(), p_nextInvTransform.end());
 		}
-		else
+		*/
+		
+		// Quat
 		{
-			cuExecute(m_pointClusters.size(),
-				CM_ApplyTransformPoint,
-				m_pointClusters,
-				GlTransform,
-				m_to->getAllPoints());
-			cuSynchronize();
+			std::vector<Quat<Real>> p_T;
+			std::vector<Quat<Real>> p_R;
+			std::vector<Real> p_S;
+
+			DArray<Quat<Real>> new_T;
+			DArray<Quat<Real>> new_R;
+			DArray<Real> new_S;
+			
+			new_T.resize(m_from->size());
+			new_R.resize(m_from->size());
+			new_S.resize(m_from->size());
+			for (int i = 0; i < m_from->size(); ++i)
+			{
+				auto& joint = (*m_from)[i];
+				joint->getGlobalQuat();
+				p_T.push_back(joint->GlT);
+				p_R.push_back(joint->GlR);
+				p_S.push_back(joint->GlS);
+			}
+			new_T.assign(p_T);
+			new_R.assign(p_R);
+			new_S.assign(p_S);
+
+			// Animation(Quat)
+			if(is_body)
+			{
+				// // FIXME: 四面体和三角面片重合点会无法复原
+				// cuExecute(m_triClusters.size(),
+				// 	CM_ApplyTransformTri,
+				// 	m_triClusters,
+				// 	GlTransform,
+				// 	m_to->getTriangles(),
+				// 	m_to->getAllPoints());
+				// cuSynchronize();
+			
+				// cuExecute(m_tetClusters.size(),
+				// 	CM_ApplyTransformTet,
+				// 	m_tetClusters,
+				// 	GlTransform,
+				// 	m_to->getTetrahedrons(),
+				// 	m_to->getAllPoints());
+				// cuSynchronize();
+			}
+			else
+			{
+				cuExecute(m_pointClusters.size(),
+					CM_ApplyTransformPointByQuat,
+					m_pointClusters,
+					m_initQuatT,
+					m_initQuatR,
+					m_initS,
+					new_T,
+					new_R,
+					new_S,
+					m_to->getAllPoints());
+				cuSynchronize();
+			}
+			m_initQuatT.assign(new_T);
+			m_initQuatR.assign(new_R);
+			m_initS.assign(new_S);
 		}
 		
 		return true;
@@ -263,19 +365,40 @@ namespace dyno
 	{
 		// 获取胶囊体接触的顶点
 
-		
+		m_initQuatT.resize(m_from->size());
+		m_initQuatR.resize(m_from->size());
+		m_initS.resize(m_from->size());
+
+		std::vector<Quat<Real>> p_T;			
+		std::vector<Quat<Real>> p_R;
+		std::vector<Real> p_S;
+
 		int for_cnt = 0;
 		for (auto joint : *m_from)
 		{
 			++for_cnt;
-			//FIXME : 坐标误差很大
+			// Matrix
 			joint->getGlobalTransform();
-			Vec4f tmp = joint->GlobalTransform * Vec4f(0, 0, 0, 1) ;
-			joint->GlCoord = Coord(tmp[0] / tmp[3], tmp[1] / tmp[3], tmp[2] / tmp[3]);
-			// 求逆误差? 
-			m_initInvTransform.push_back(joint->GlobalTransform.inverse());
+			m_initInvTransform.push_back(joint->GlobalTransform.inverse());// 求逆误差? 
+			Coord cm = joint->getCoordByMatrix(Coord(0,0,0));	
+
+			// Quat
+			joint->getGlobalQuat();
+			p_T.push_back(joint->GlT);
+			p_R.push_back(joint->GlR);
+			p_S.push_back(joint->GlS);
+			Coord qm = joint->getCoordByQuat(Coord(0,0,0));
+
+			joint->GlCoord = qm;
+			// std::cerr << for_cnt  <<" (M) :  " <<cm[0] << ", " << cm[1] << ", " << cm[2] << "\n";
+			//std::cerr << for_cnt  <<" (Q) :  " <<qm[0] << ", " << qm[1] << ", " << qm[2] << "\n";
 			std::cerr << for_cnt  <<" :  " <<joint->GlCoord[0] << ", " << joint->GlCoord[1] << ", " << joint->GlCoord[2] << "\n";
 		}
+		
+		//Quat
+		m_initQuatT.assign(p_T);
+		m_initQuatR.assign(p_R);
+		m_initS.assign(p_S);
 
 		std::vector<JCapsule>capsule_list;
 		int id_joint = 0;
@@ -288,10 +411,10 @@ namespace dyno
 												joint->GlCoord, joint_son->GlCoord});
 				++id_cap;
 				//DEBUG
-				float s = 1;
-				printf("(%f,%f,%f) -> (%f,%f,%f)\n",
-					joint->GlCoord[0] / s, joint->GlCoord[1] / s, joint->GlCoord[2] / s,
-					joint_son->GlCoord[0] / s, joint_son->GlCoord[1] / s, joint_son->GlCoord[2] / s);
+				// float s = 1;
+				// printf("(%f,%f,%f) -> (%f,%f,%f)\n",
+				// 	joint->GlCoord[0] / s, joint->GlCoord[1] / s, joint->GlCoord[2] / s,
+				// 	joint_son->GlCoord[0] / s, joint_son->GlCoord[1] / s, joint_son->GlCoord[2] / s);
 			}
 			++id_joint;
 		}
@@ -299,7 +422,6 @@ namespace dyno
 
 		nbQuery->inRadius()->setValue(m_radius);
 		nbQuery->inPosition()->allocate()->assign(m_to->getPoints());
-		// nbQuery->inJointSize()->setValue(m_from->size());
 		nbQuery->inCapsule()->allocate()->assign(capsule_list);
 
 		nbQuery->update();

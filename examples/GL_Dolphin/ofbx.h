@@ -205,6 +205,8 @@ struct Object
 	Matrix getLocalTransform() const;
 	Matrix evalLocal(const Vec3& translation, const Vec3& rotation) const;
 	Matrix evalLocal(const Vec3& translation, const Vec3& rotation, const Vec3& scaling) const;
+
+	
 	bool isNode() const { return is_node; }
 
 
@@ -429,9 +431,12 @@ struct AnimationCurveNode : Object
 
 	AnimationCurveNode(const Scene& _scene, const IElement& _element);
 
-	virtual const AnimationCurve* getCurve(int idx) const = 0; 
+	virtual const ofbx::AnimationCurve* getCurve(int idx) const = 0; 
 	virtual Vec3 getNodeLocalTransform(double time) const = 0;
 	virtual const Object* getBone() const = 0;
+	virtual float getAnimationDX() const = 0; // By "d|X"
+	virtual float getAnimationDY() const = 0;
+	virtual float getAnimationDZ() const = 0;
 };
 
 

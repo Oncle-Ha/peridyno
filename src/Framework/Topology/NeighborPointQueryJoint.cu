@@ -136,7 +136,6 @@ namespace dyno
 			int3 next_c;	
 			
 
-			// FIXME: Grid不全
 			// 选取线段上最近Grid
 			for (int c = 1; c < 27; c++)
 			{
@@ -401,7 +400,9 @@ namespace dyno
 
 		int numPoint = m_reduce.accumulate(count.begin(), count.size());
 		m_scan.exclusive(count, true);
-		
+
+		assert(numPoint >= 0);
+
 		outPairs.resize(numPoint);
 		cuExecute(numPair,
 			K_SetOutPair,

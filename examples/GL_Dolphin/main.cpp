@@ -44,22 +44,80 @@ bool init(const char* filepath)
 }
 
 
+// 需要根据模型与骨骼的坐标关系来改变
 void copyVec(DataType3f::Coord &dest, ofbx::Vec3 src){dest = DataType3f::Coord(src.x, src.y, src.z);}
-void copyVecR(DataType3f::Coord &dest, ofbx::Vec3 src){dest = DataType3f::Coord(src.x, -src.y, -src.z);}
-void copyVecT(DataType3f::Coord &dest, ofbx::Vec3 src){dest = DataType3f::Coord(src.x, src.y, -src.z);}
-
+void copyVecR(DataType3f::Coord &dest, ofbx::Vec3 src){dest = DataType3f::Coord(src.x, src.y, src.z);}
+void copyVecT(DataType3f::Coord &dest, ofbx::Vec3 src){dest = DataType3f::Coord(src.x, src.y, src.z);}
+// TODO: 放到jointTree中
 void getModelProperties(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3f>> cur)
 {
 	cur->id = object.id;
 
-	copyVec(cur->PreRotation, object.getPreRotation());
+	//FIXME Pre可能出错了
+	copyVecR(cur->PreRotation, object.getPreRotation());
 	copyVecT(cur->LclTranslation, object.getLocalTranslation());
 	copyVecR(cur->LclRotation, object.getLocalRotation());
 	copyVec(cur->LclScaling, object.getLocalScaling());
+	cur->CurTranslation = cur->LclTranslation;
+	cur->CurRotation = cur->LclRotation;
+	cur->CurScaling = cur->LclScaling;
 
 	temp_Dolphin->m_jointMap.push_back(cur);
 }
 
+void getAnimationCurve(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3f>> parent)
+{
+	if (object.getType() != ofbx::Object::Type::ANIMATION_CURVE_NODE) return;
+	if (strlen(object.name) != 1) return;
+	auto AnimObject = (ofbx::AnimationCurveNode*)&object;
+	DataType3f::Real d[3];
+	d[0] = AnimObject->getAnimationDX();
+	d[1] = AnimObject->getAnimationDY();
+	d[2] = AnimObject->getAnimationDZ();
+	auto curve0 = AnimObject->getCurve(0);
+	int key_allsize = (curve0 == nullptr)? 1: curve0->getKeyCount();
+	auto animCurve = std::make_shared<dyno::AnimationCurve<DataType3f>>(key_allsize, d[0], d[1], d[2]);
+
+	for (int i = 0; i < 3; ++i)
+	{
+		std::vector<long long> times;
+		std::vector<float> values;
+		
+		auto curve = AnimObject->getCurve(i);
+		if (curve == nullptr)
+		{
+			times.push_back(0);
+			values.push_back(d[i]);
+		}
+		else {
+			int key_count = curve->getKeyCount();
+
+			//assert(key_allsize == key_count);
+
+			const long long* t = curve->getKeyTime();
+			const float* v = curve->getKeyValue();
+			times.assign(t, t + key_count);
+			values.assign(v, v + key_count);
+		}
+
+		animCurve->set(i, times, values);
+	}
+
+	switch (object.name[0])
+	{
+	case 'T':
+		parent->setAnimTranslation(animCurve);
+		break;
+	case 'R':
+		parent->setAnimRotation(animCurve);
+		break;
+	case 'S':
+		parent->setAnimScaling(animCurve);
+		break;		
+	default:
+		break;
+	}
+}
 
 void getLimbNode(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3f>> parent)
 {
@@ -77,7 +135,12 @@ void getLimbNode(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3
 	int i = 0;
 	while (ofbx::Object* child = object.resolveObjectLink(i))
 	{
-		if (object.getType() == ofbx::Object::Type::LIMB_NODE) getLimbNode(*child, cur);
+		if (object.getType() == ofbx::Object::Type::LIMB_NODE) 
+		{
+			getLimbNode(*child, cur);
+			// animation curve node
+			getAnimationCurve(*child, cur);
+		}
 		else getLimbNode(*child, parent);
 		++i;
 	}	
@@ -152,22 +215,22 @@ int main()
 	// set dolphin
 	std::shared_ptr<Dolphin<DataType3f>> dolphin = std::make_shared<Dolphin<DataType3f>>();
 	temp_Dolphin = dolphin;
-	root->addParticleSystem(dolphin); 
+	root->addParticleSystem(dolphin);
 
 	dolphin->setMass(1.0f);
 
-	// dolphin->loadMixFile("../../data/dolphin/Dolphin");
-	// loadFBX("../../data/dolphin/Dolphin_Particles.fbx");
-	// // 顺序：缩放，平移
-	// dolphin->scale(0.2f); 
-	// dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
+	dolphin->loadMixFile("../../data/dolphin/Dolphin");
+	loadFBX("../../data/dolphin/Dolphin_Particles.fbx");
+	// 顺序：缩放，平移
+	dolphin->scale(0.2f);
+	dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
 	
 	//DEBUG 
-	dolphin->loadParticles(Vec3f(-2, 0, -0.5), Vec3f(2, 4, 0.5), 0.08);
-	loadFBX("../../data/dolphin/BoneBox.fbx");
-	//顺序：缩放，平移
-	dolphin->scale(0.1f); 
-	dolphin->translate(Vec3f(0.5f, 0.4f, 0.25f));
+	// dolphin->loadParticles(Vec3f(-2, 0, -0.5), Vec3f(2, 4, 0.5), 0.05);
+	// loadFBX("../../data/dolphin/BoneBoxAnim2.fbx");
+	// // 顺序：缩放，平移
+	// dolphin->scale(0.1f); 
+	//dolphin->translate(Vec3f(0.5f, 0.4f, 0.25f));
 
 	dolphin->setVisible(true);
 

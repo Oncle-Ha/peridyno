@@ -3,6 +3,7 @@
 
 #define cos_angle(angle) cos(double(angle * 3.1415926f / 180.0))
 #define sin_angle(angle) sin(double(angle * 3.1415926f / 180.0))
+#define radian(x) x * 3.1415926f / 180.0
 
 namespace dyno
 {
@@ -25,7 +26,7 @@ namespace dyno
 
         GlT = Quat<Real>(0, 0, 0, 0);
         GlR = Quat<Real>(0, 0, 0, 0);
-        GlS = Quat<Real>(0, 0, 0, 0);
+        GlS = 1.f;
     }
     
     template<typename TDataType>
@@ -36,10 +37,9 @@ namespace dyno
 
 
 	template<typename TDataType>
-    Mat4f JointTree<TDataType>::getTransform(Coord & T, Coord& R, Coord& S)
+	typename JointTree<TDataType>::Mat JointTree<TDataType>::getTransform(Coord & T, Coord& R, Coord& S)
     {
-		// TODO:改为四元数
-        Mat4f translation = Mat4f(
+        Mat translation = Mat(
             1, 0, 0, T[0],
             0, 1, 0, T[1],
             0, 0, 1, T[2],
@@ -48,27 +48,27 @@ namespace dyno
         // R[X,Y,Z] -> [Z,X,Y]轴
 
         double X = R[0];
-        Mat4f rotation_x = Mat4f(
+        Mat rotation_x = Mat(
             1, 0, 0, 0,
             0, cos_angle(X), -sin_angle(X), 0,
             0, sin_angle(X), cos_angle(X), 0,
             0, 0, 0, 1);
 
 		double Y = R[1];
-        Mat4f rotation_y = Mat4f(
+        Mat rotation_y = Mat(
             cos_angle(Y), 0, sin_angle(Y), 0,
             0, 1, 0, 0,
             -sin_angle(Y), 0, cos_angle(Y), 0,
             0, 0, 0, 1);
 
 		double Z = R[2];
-        Mat4f rotation_z = Mat4f(
+        Mat rotation_z = Mat(
             cos_angle(Z), -sin_angle(Z), 0, 0,
             sin_angle(Z), cos_angle(Z), 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 1);
 
-        Mat4f scaling= Mat4f(
+        Mat scaling= Mat(
             S[0], 0, 0, 0,
             0, S[1], 0, 0,
             0, 0, S[2], 0,
@@ -82,68 +82,87 @@ namespace dyno
     void JointTree<TDataType>::getGlobalTransform()
     {
         // 注意顺序
-        this->GlobalTransform = getTransform(this->LclTranslation, this->LclRotation, this->LclScaling);
+        this->GlobalTransform = getTransform(this->CurTranslation, this->CurRotation, this->CurScaling);
         if(this->parent != nullptr)
             this->GlobalTransform = this->parent->GlobalTransform * this->GlobalTransform;
         else
         {
-            //DEBUG 简单平移
+            //Pre
             this->GlobalTransform = getTransform(this->PreTranslation, this->PreRotation, this->PreScaling) * this->GlobalTransform;
-            
-            // T
-            Coord tmp_t(0,0,0);
-            for (int i = 0; i < 3; ++i)
-                tmp_t[i] += dist(generator)  * 0.0005;
-            // this->PreTranslation += tmp_t;
-            
-            // R
-            this->PreRotation += tmp;
-
-            tmp = Coord(0);
-
         }
-            
+        //DEBUG
+		// printf("Mat:\n");
+        // for (int i = 0; i < 4; ++i)
+        // {
+        //     auto v = this->GlobalTransform.row(i);
+        //     printf("[%f, %f, %f, %f]\n", v[0], v[1], v[2], v[3]);
+        // }        
     }
 
     template<typename TDataType>
-    void JointTree<TDataType>::getQuat(Coord &T, Coord &R, Coord &S)
+    void JointTree<TDataType>::getQuat(Coord &T, Coord &R, float &S)
     {
-
-        // Scaling
-        Quat<Real> s(S[0], S[1], S[2], 0.f);
-        // Translation
         Quat<Real> t(T[0], T[1], T[2], 0.f);
-        // Rotate X
-        Quat<Real> q_x(R[0], Vec3f(1.f, 0.f, 0.f));
-        Quat<Real> q_y(R[1], Vec3f(0.f, 1.f, 0.f));
-        Quat<Real> q_z(R[2], Vec3f(0.f, 0.f, 1.f));
+        // Rotate
+        Quat<Real> q_x(radian(R[0]), Vec3f(1.f, 0.f, 0.f));
+        Quat<Real> q_y(radian(R[1]), Vec3f(0.f, 1.f, 0.f));
+        Quat<Real> q_z(radian(R[2]), Vec3f(0.f, 0.f, 1.f));
         
-        GlT = GlT + GlS * GlR * t * GlR.conjugate();
-        GlS = GlS * s;
-        GlR = GlR * (q_x * q_y * q_z);
+        this->GlT = this->GlT + this->GlS * this->GlR * t * this->GlR.conjugate();
+        this->GlS = this->GlS * S;
+        this->GlR = this->GlR * (q_x * q_y * q_z);
 
+		// printf("Quat:\n");
+        // printf("T: [%f, %f, %f, %f]\n", this->GlT.x, this->GlT.y, this->GlT.z, this->GlT.w);
+        // printf("R: [%f, %f, %f, %f]\n", this->GlR.x, this->GlR.y, this->GlR.z, this->GlR.w);
+        // printf("S: [%f]\n", this->GlS);
+        // for (int i = 0; i < 4; ++i)
+        // {
+        //     auto v = this->GlobalTransform.row(i);
+        //     printf("[%f, %f, %f, %f]\n", v[0], v[1], v[2], v[3]);
         // TODO:
         // GlR.normalize(); 
     }
 
     // 遍历关节层次时，顺便更新
 	template<typename TDataType>
-    void JointTree<TDataType>::getGlobalTransform2()
+    void JointTree<TDataType>::getGlobalQuat()
     {
         if(this->parent != nullptr)
         {
             this->GlT = this->parent->GlT;
             this->GlS = this->parent->GlS;
             this->GlR = this->parent->GlR;
-            getQuat(this->LclTranslation, this->LclRotation, this->LclScaling);
+            getQuat(this->CurTranslation, this->CurRotation, this->CurScaling[0]);
         }else
         {
             this->GlT = Quat<Real>(0.f, 0.f, 0.f, 0.f);
-            this->GlS = Quat<Real>(1.f, 1.f, 1.f, 0.f);
+            this->GlS = 1.f;
             this->GlR = Quat<Real>(0.f, 0.f, 0.f, 1.f);
-            getQuat(this->PreTranslation, this->PreRotation, this->PreScaling);
-            getQuat(this->LclTranslation, this->LclRotation, this->LclScaling);
+            getQuat(this->PreTranslation, this->PreRotation, this->PreScaling[0]);
+            getQuat(this->CurTranslation, this->CurRotation, this->CurScaling[0]);
+
         }
+
+            // printf("[Root] Cur QuatR: (%f)\n", this->GlR.w);
+            // printf("[Root] T: (%f, %f, %f)\n", this->CurTranslation[0], this->CurTranslation[1], this->CurTranslation[2]);
+            // printf("[Root] R: (%f, %f, %f)\n", this->CurRotation[0], this->CurRotation[1], this->CurRotation[2]);
+            // printf("[Root] S: (%f)\n", this->CurScaling[0]);
+    }
+
+    template<typename TDataType>
+	typename JointTree<TDataType>::Coord JointTree<TDataType>::getCoordByMatrix(Coord X)
+	{
+        Vec4f tmp = this->GlobalTransform * Vec4f(X[0], X[1], X[2], 1) ;
+		return Coord(tmp[0] / tmp[3], tmp[1] / tmp[3], tmp[2] / tmp[3]);
+    }
+
+    template<typename TDataType>
+	typename JointTree<TDataType>::Coord JointTree<TDataType>::getCoordByQuat(Coord X)
+	{
+        Quat<Real> tmp(X[0], X[1], X[2], 1) ;
+        tmp = this->GlS * this->GlR * tmp *  this->GlR.conjugate() + this->GlT;
+		return Coord(tmp.x, tmp.y, tmp.z);
     }
 
     template<typename TDataType>
@@ -154,8 +173,14 @@ namespace dyno
         this->LclTranslation = jointTree.LclTranslation;
         this->LclRotation = jointTree.LclRotation;
         this->LclScaling = jointTree.LclScaling;
+        this->AnimTranslation = jointTree.AnimTranslation;
+        this->AnimRotation = jointTree.AnimRotation;
+        this->AnimScaling = jointTree.AnimScaling;
         this->GlCoord = jointTree.GlCoord;
         this->GlobalTransform = jointTree.GlobalTransform;
+        this->GlT = jointTree.GlT;
+        this->GlR = jointTree.GlR;
+        this->GlS = jointTree.GlS;
         this->RotationActive = jointTree.RotationActive;
         this->children.assign(jointTree.children.begin(), jointTree.children.end());
         this->parent = jointTree.parent;
@@ -171,6 +196,24 @@ namespace dyno
     void JointTree<TDataType>::translate(Coord t)
     {
         PreTranslation += t;
+    }
+
+    template<typename TDataType>
+    void JointTree<TDataType>::applyAnimationByOne(Coord& init, Coord& cur, std::shared_ptr<AnimationCurve<TDataType>>& anim, Real ptime)
+    {
+        // cur = anim->getCurveValueAll(ptime);
+        cur = anim->getCurveValueCycle(ptime);
+    }
+
+    template<typename TDataType>
+    void JointTree<TDataType>::applyAnimationAll(Real ptime)
+    {
+        if (AnimTranslation != nullptr)
+        applyAnimationByOne(LclTranslation, CurTranslation, AnimTranslation, ptime);
+        if (AnimRotation != nullptr)
+        applyAnimationByOne(LclRotation, CurRotation, AnimRotation, ptime);
+        if (AnimScaling != nullptr)
+        applyAnimationByOne(LclScaling, CurScaling, AnimScaling, ptime);
     }
     
 #ifdef PRECISION_FLOAT
