@@ -220,7 +220,7 @@ std::shared_ptr<SceneGraph> createScene()
 	//dolphin->setMass(1.0f);
 
 	dolphin->loadMixFile("../../data/dolphin/Dolphin");
-	loadFBX("../../data/dolphin/Dolphin_Particles_SubAnim.fbx");
+	loadFBX("../../data/dolphin/Dolphin_Particles_SubAnimU.fbx");
 	// 顺序：缩放，平移
 	dolphin->scale(0.2f);
 	dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));

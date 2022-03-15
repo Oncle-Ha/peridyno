@@ -25,6 +25,12 @@ namespace dyno{
         Real fbxTimeToSeconds(long long value){return Real(value) / FBXTIME * ANIM_SPEED;}
         long long secondsToFbxTime(Real value){return long long (value * ANIM_SPEED * FBXTIME);}
 
+        void setInitVal(Coord init){
+            m_initVal[0] = init[0];
+            m_initVal[1] = init[1];
+            m_initVal[2] = init[2];
+        }
+        
         // 获取递增时间下该时刻的曲线值
         Coord getCurveValueAlong(Real ptime);
         // 获取任意时刻的曲线值
@@ -37,6 +43,7 @@ namespace dyno{
         // (X,Y,Z)
         int m_cur[3];
         Real m_initVal[3];
+        Real m_endVal[3];
         std::vector<long long> m_times[3]; // 若不存在曲线，则只有一个 [0]
         std::vector<Real> m_values[3]; 
 	};

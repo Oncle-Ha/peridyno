@@ -144,10 +144,10 @@ namespace dyno
 
         }
 
-            // printf("[Root] Cur QuatR: (%f)\n", this->GlR.w);
-            // printf("[Root] T: (%f, %f, %f)\n", this->CurTranslation[0], this->CurTranslation[1], this->CurTranslation[2]);
-            // printf("[Root] R: (%f, %f, %f)\n", this->CurRotation[0], this->CurRotation[1], this->CurRotation[2]);
-            // printf("[Root] S: (%f)\n", this->CurScaling[0]);
+            printf("[Root] Cur QuatR: (%f)\n", this->GlR.w);
+            printf("[Root] T: (%f, %f, %f)\n", this->CurTranslation[0], this->CurTranslation[1], this->CurTranslation[2]);
+            printf("[Root] R: (%f, %f, %f)\n", this->CurRotation[0], this->CurRotation[1], this->CurRotation[2]);
+            printf("[Root] S: (%f)\n", this->CurScaling[0]);
     }
 
     template<typename TDataType>

@@ -55,9 +55,18 @@ namespace dyno
 		Coord getCoordByMatrix(Coord X);
 		Coord getCoordByQuat(Coord X);
         
-        void setAnimTranslation(std::shared_ptr<AnimationCurve<TDataType>> t) {AnimTranslation = t;}
-        void setAnimRotation(std::shared_ptr<AnimationCurve<TDataType>> r) {AnimRotation = r;}
-        void setAnimScaling(std::shared_ptr<AnimationCurve<TDataType>> s) {AnimScaling = s;}
+        void setAnimTranslation(std::shared_ptr<AnimationCurve<TDataType>> t) {
+            AnimTranslation = t;
+            AnimTranslation->setInitVal(LclTranslation);
+        }
+        void setAnimRotation(std::shared_ptr<AnimationCurve<TDataType>> r) {
+            AnimRotation = r;
+            AnimTranslation->setInitVal(LclRotation);
+        }
+        void setAnimScaling(std::shared_ptr<AnimationCurve<TDataType>> s) {
+            AnimScaling = s;
+            AnimScaling->setInitVal(LclScaling);
+        }
 
         // 更新动画
         void applyAnimationByOne(Coord& init, Coord& cur, std::shared_ptr<AnimationCurve<TDataType>>& anim, Real ptime);

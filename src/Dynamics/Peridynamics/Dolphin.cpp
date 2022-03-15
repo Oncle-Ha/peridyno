@@ -30,7 +30,7 @@ namespace dyno
 		this->stateVelocity()->connect(peri->inVelocity());
 		this->stateForce()->connect(peri->inForce());
 		this->currentRestShape()->connect(peri->inRestShape());
-		this->animationPipeline()->pushModule(peri);// 暂时只控制点集
+		// this->animationPipeline()->pushModule(peri);// 暂时只控制点集
 
 		//Create a node for surface mesh rendering
 		// m_surfaceNode = this->template createAncestor<Node>("Mesh");

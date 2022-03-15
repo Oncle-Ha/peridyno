@@ -22,6 +22,9 @@ namespace dyno
         m_initVal[0] = dx;
         m_initVal[1] = dy;
         m_initVal[2] = dz;
+        m_endVal[0] = dx;
+        m_endVal[1] = dy;
+        m_endVal[2] = dz;
     }
 
 	template<typename TDataType>
