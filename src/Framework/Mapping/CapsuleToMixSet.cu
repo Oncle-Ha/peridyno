@@ -7,6 +7,19 @@
 
 namespace dyno
 {
+	const Vec3f default_color[] ={
+		Vec3f(219, 68, 83) / 255.0,
+		Vec3f(233, 87, 62) / 255.0,
+		Vec3f(246, 187, 67) / 255.0,
+		Vec3f(93, 156, 236) / 255.0,
+		Vec3f(140, 192, 81) / 255.0,
+		Vec3f(54, 188, 155) / 255.0,
+		Vec3f(79, 192, 232) / 255.0,
+		Vec3f(101, 109, 120) / 255.0,
+		Vec3f(230, 233, 238) / 255.0,
+		Vec3f(172, 146, 237) / 255.0,
+		Vec3f(236, 135, 191) / 255.0,
+		Vec3f(170, 178, 189) / 255.0};
 	template<typename TDataType>
 	CapsuleToMixSet<TDataType>::CapsuleToMixSet()
 		: TopologyMapping()
@@ -140,6 +153,198 @@ namespace dyno
 		to[p] = Coord(tmp_p.x, tmp_p.y, tmp_p.z);
 	}	
 
+	// 计算重心坐标
+	template<typename Coord, typename Pair2>
+	__global__ void CM_CountClusterCoord(
+		DArray<Coord> to,
+		DArray<Pair2> clusters,
+		DArray<int> sizeCluster,
+		DArray<Coord> coordCluster)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= clusters.size()) return;
+		atomicAdd(&sizeCluster[clusters[pId][0]], 1);
+		// Coord
+		for (int i = 0; i < 3; ++i)
+			atomicAdd(&coordCluster[clusters[pId][0]][i], to[clusters[pId][1]][i]);
+	}
+
+	// 计算A矩阵
+	template<typename Coord, typename Pair2, typename Matrix>
+	__global__ void CM_ComputeMatrixA(
+		DArray<Coord> to,
+		DArray<Pair2> clusters,
+		DArray<int> sizeCluster,
+		DArray<Coord> coordCluster,
+		DArray<Coord> directDis,
+		DArray<Matrix> matA1,
+		DArray<Matrix> matA2)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= clusters.size()) return;
+		int point = clusters[pId][1];
+		int joint = clusters[pId][0];
+		Coord center = coordCluster[joint] / (1.0 * sizeCluster[joint]);
+		//DEBUG
+		if(pId == -1)
+			printf("New center: [%f, %f, %f]\n", center[0], center[1], center[2]);
+
+		Matrix a1 = Matrix(0);
+		Matrix a2 = Matrix(0);
+		Coord q, p;
+		q = to[point] - center;
+		p = directDis[pId];
+			a1(0, 0) = q[0] * p[0]; a1(0, 1) = q[0] * p[1]; a1(0, 2) = q[0] * p[2];
+			a1(1, 0) = q[1] * p[0]; a1(1, 1) = q[1] * p[1]; a1(1, 2) = q[1] * p[2];
+			a1(2, 0) = q[2] * p[0]; a1(2, 1) = q[2] * p[1]; a1(2, 2) = q[2] * p[2];	
+			
+		q = directDis[pId];
+		p = directDis[pId];
+			a2(0, 0) = q[0] * p[0]; a2(0, 1) = q[0] * p[1]; a2(0, 2) = q[0] * p[2];
+			a2(1, 0) = q[1] * p[0]; a2(1, 1) = q[1] * p[1]; a2(1, 2) = q[1] * p[2];
+			a2(2, 0) = q[2] * p[0]; a2(2, 1) = q[2] * p[1]; a2(2, 2) = q[2] * p[2];		
+
+		// Mat3
+		for (int i = 0; i < 3; ++i)
+			for (int j = 0; j < 3; ++j)
+			{
+				atomicAdd(&(matA1[joint](i, j)), a1(i, j));
+				atomicAdd(&(matA2[joint](i, j)), a2(i, j));
+			}
+	}
+
+	// R = Polar(A)
+	template<typename Matrix>
+	__global__ void CM_ComputeMatrixR(
+		DArray<Matrix> matA1,
+		DArray<Matrix> matA2)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= matA1.size()) return;
+		Matrix A =  matA1[pId] * matA2[pId].inverse();
+		Matrix R(0), U(0), D(0), V(0);
+	
+		
+		polarDecomposition(A, R, U, D, V);
+		matA1[pId] = R;
+		//DEBUG 
+		if (pId == -1)
+		{
+			printf("Matrix R:\n");
+			for (int i = 0; i < 3; ++i)
+				printf("[%f, %f, %f]\n", R(i, 0), R(i, 1), R(i, 2));	
+			
+			printf("Matrix A:\n");
+			for (int i = 0; i < 3; ++i)
+				printf("[%f, %f, %f]\n", A(i, 0), A(i, 1), A(i, 2));					
+		}
+			
+	}
+
+	// Shape Mathc更新点坐标
+	template<typename Coord, typename Pair2, typename Matrix, typename NodeType>
+	__global__ void CM_ShapeMatchPos(
+		DArray<Coord> to,
+		DArray<NodeType> nodetype,
+		DArray<Coord> vel,
+		DArray<Pair2> clusters,
+		DArray<int> sizeCluster,
+		DArray<Coord> coordCluster,
+		DArray<Coord> directDis,
+		DArray<Matrix> matR,
+		Real dt)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= clusters.size()) return;
+		int point = clusters[pId][1];
+		int joint = clusters[pId][0];
+
+		if (nodetype[point] == NodeType::TwoD) return;
+
+		Coord center = coordCluster[joint] / (1.0 * sizeCluster[joint]);
+		if (joint >= matR.size())
+			printf("Error\n");
+		Coord new_to = center + matR[joint] * directDis[pId];
+		vel[point] += (new_to - to[point]) / dt;
+		to[point] = new_to;
+
+		//DEBUG
+		if(pId == -1)
+		{
+			printf("Now center: [%f, %f, %f]\n", center[0], center[1], center[2]);
+			printf("MatR:\n");
+			for (int i = 0; i < 3; ++i)
+				printf("[%f, %f, %f]\n", matR[joint](i, 0), matR[joint](i, 1), matR[joint](i, 2));
+			printf("directDis: [%f, %f, %f]\n", directDis[pId][0], directDis[pId][1], directDis[pId][2]);
+			printf("Now To: [%f, %f, %f]\n", to[point][0], to[point][1], to[point][2]);
+		}
+		
+	}
+
+	template<typename TDataType>
+	bool CapsuleToMixSet<TDataType>::shapeMatch()
+	{
+		int numCluster = m_from->size();
+		
+		DArray<int> size_cluster;
+		DArray<Coord> coord_cluster;
+
+		int numPair = m_pointClusters.size();
+
+		size_cluster.resize(numCluster);
+		coord_cluster.resize(numCluster);
+		size_cluster.reset();
+		coord_cluster.reset();
+		cuExecute(numPair,
+			CM_CountClusterCoord,
+			m_to->getPoints(),
+			m_pointClusters,
+			size_cluster,
+			coord_cluster);
+		cuSynchronize();
+
+		DArray<Mat3> A1;
+		DArray<Mat3> A2;
+		A1.resize(numCluster);
+		A2.resize(numCluster);
+		A1.reset();
+		A2.reset();
+		cuExecute(numPair,
+			CM_ComputeMatrixA,
+			m_to->getPoints(),
+			m_pointClusters,
+			size_cluster,
+			coord_cluster,
+			m_initCoord,
+			A1,
+			A2);
+		cuSynchronize();
+
+		cuExecute(numCluster,
+			CM_ComputeMatrixR,
+			A1,
+			A2);
+		cuSynchronize();
+
+		cuExecute(numPair,
+			CM_ShapeMatchPos,
+			m_to->getPoints(),
+			m_to->getVerType(),
+			this->inVelocity()->getData(),
+			m_pointClusters,
+			size_cluster,
+			coord_cluster,
+			m_initCoord,
+			A1,
+			this->inTimeStep()->getData());
+		cuSynchronize();
+
+		size_cluster.clear();
+		coord_cluster.clear();
+		A1.clear();
+		A2.clear();
+	}
+
 	template<typename TDataType>
 	bool CapsuleToMixSet<TDataType>::apply()
 	{
@@ -196,6 +401,9 @@ namespace dyno
 		}
 		*/
 		
+		// Shape match
+		shapeMatch();
+
 		// Quat
 		{
 			std::vector<Quat<Real>> p_T;
@@ -258,10 +466,15 @@ namespace dyno
 			m_initQuatT.assign(new_T);
 			m_initQuatR.assign(new_R);
 			m_initS.assign(new_S);
+
+			new_T.clear();
+			new_R.clear();
+			new_S.clear();
 		}
 		
 		return true;
 	}
+
 
 	// 统计<几何体, 关节, 顶点>对数
 	template<typename Pair2>
@@ -353,11 +566,34 @@ namespace dyno
 	template<typename Vec3f, typename Pair2>
 	__global__ void CM_UpdateColor2(
 		DArray<Vec3f> colors,
-		DArray<Pair2> clusters)
+		DArray<Pair2> clusters,
+		DArray<Vec3f> default_color)
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= clusters.size()) return;
-		colors[clusters[pId][1]] = Vec3f(0.f,1.f,0.f);
+		// colors[clusters[pId][1]] = Vec3f(0.f, 1.f, 0.f);
+		colors[clusters[pId][1]] = default_color[clusters[pId][0] % 12];
+	}
+
+
+	template<typename Coord, typename Pair2>
+	__global__ void CM_CountPointCoord(
+		DArray<Coord> initTo,
+		DArray<Pair2> clusters,
+		DArray<int> sizeCluster,
+		DArray<Coord> coordCluster,
+		DArray<Coord> directDis)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= clusters.size()) return;
+		Coord center = coordCluster[clusters[pId][0]] / (1.0 * sizeCluster[clusters[pId][0]]);
+		//DEBUG
+		if(pId == -1)
+		{
+			printf("center: [%f, %f, %f]\n", center[0], center[1], center[2]);
+			printf("To: [%f, %f, %f]\n", initTo[clusters[pId][1]][0], initTo[clusters[pId][1]][1], initTo[clusters[pId][1]][2]);
+		}
+		directDis[pId] = initTo[clusters[pId][1]] - center;
 	}
 
 	template<typename TDataType>
@@ -418,6 +654,8 @@ namespace dyno
 			}
 			++id_joint;
 		}
+		int numCluster = id_joint;
+
  		auto nbQuery = std::make_shared<NeighborPointQueryJoint<TDataType>>();
 
 		nbQuery->inRadius()->setValue(m_radius);
@@ -434,6 +672,8 @@ namespace dyno
 
 		DArray<int> count;
 		
+		// tet, tri
+		/*
 		auto fun_body = [=](DArrayList<int>& Ver2X, DArray<Pair2>& m_Clusters) mutable 
 		{
 			int pairVerJointSize = p_pairs2.size();
@@ -495,29 +735,72 @@ namespace dyno
 			fun_body(m_to->getVer2Tet(), m_tetClusters);
 		}
 		else
+		*/
+
+		m_pointClusters.assign(p_pairs2);
+		int numPoint = m_to->getAllPoints().size();
+		int numPair = m_pointClusters.size();
+		// Set Color
 		{
-			m_pointClusters.assign(p_pairs2);
-			int numPoint = m_to->getAllPoints().size();
+			std::vector<Vec3f> v_color(default_color, default_color + 12);
+			DArray<Vec3f> d_color;
+			d_color.resize(v_color.size());
+			d_color.assign(v_color);
 
 			if (this->outColor()->isEmpty())
 				this->outColor()->allocate();
 			auto& out_color = this->outColor()->getData();
-
+			
 			out_color.resize(numPoint);
 			cuExecute(numPoint,
 				CM_UpdateColor1,
 				out_color);
 			cuSynchronize();
 
-			printf("Num of Clusters:%d\n", m_pointClusters.size());
-			cuExecute(m_pointClusters.size(),
+			printf("Num of Clusters:%d\n", numPair);
+			cuExecute(numPair,
 				CM_UpdateColor2,
 				out_color,
-				m_pointClusters);
-			cuSynchronize();			
+				m_pointClusters,
+				d_color);
+			cuSynchronize();
+		}
+
+		// Set Rigid Shape
+		{
+			DArray<Coord> barycentre;
+			barycentre.resize(numCluster);
+			count.resize(numCluster);
+			
+			// =0
+			barycentre.reset();
+			count.reset();
+			
+			// 获取每个joint的重心
+			cuExecute(numPair,
+				CM_CountClusterCoord,
+				m_to->getAllPoints(), 
+				m_pointClusters, 
+				count, 
+				barycentre);
+			cuSynchronize();
+
+			m_initCoord.resize(numPair);
+			// 求解每个点的r_i
+			cuExecute(numPair,
+				CM_CountPointCoord,
+				m_to->getAllPoints(), 
+				m_pointClusters, 
+				count, 
+				barycentre,
+				m_initCoord);
+			
+			barycentre.clear();
 		}
 		
 
+		count.clear();
+		p_pairs2.clear();
 
 	}
 

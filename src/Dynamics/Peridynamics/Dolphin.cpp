@@ -30,7 +30,7 @@ namespace dyno
 		this->stateVelocity()->connect(peri->inVelocity());
 		this->stateForce()->connect(peri->inForce());
 		this->currentRestShape()->connect(peri->inRestShape());
-		// this->animationPipeline()->pushModule(peri);// 暂时只控制点集
+		this->animationPipeline()->pushModule(peri);// 暂时只控制点集
 
 		//Create a node for surface mesh rendering
 		// m_surfaceNode = this->template createAncestor<Node>("Mesh");
@@ -57,7 +57,10 @@ namespace dyno
 		jointMapping->setCapsuleRadius(0.0325);
         // jointMapping->setCapsuleRadius(0.055);
         // jointMapping->setCapsuleRadius(0.085);
+        
         this->currentColor()->connect(jointMapping->outColor());
+        this->stateVelocity()->connect(jointMapping->inVelocity());
+        this->varTimeStep()->connect(jointMapping->inTimeStep());
         // jointMapping->outColor()->connect(this->currentColor());
 
     }

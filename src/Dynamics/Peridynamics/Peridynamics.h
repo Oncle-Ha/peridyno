@@ -40,8 +40,8 @@ namespace dyno
 		~Peridynamics() override {};
 
 	public:
-		// DEF_VAR(Real, Horizon, 0.0085, "");
-		DEF_VAR(Real, Horizon, 0.0185, "");
+		DEF_VAR(Real, Horizon, 0.0085, "");
+		// DEF_VAR(Real, Horizon, 0.0285, "");
 
 		DEF_VAR_IN(Real, TimeStep, "Time step size!");
 

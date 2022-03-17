@@ -112,7 +112,8 @@ namespace dyno
         DArray<Coord>&  getTriPoints() { m_triCoordsTmp.resize(m_triPointSize); m_triCoordsTmp.assign(m_coords, m_triPointSize, 0, 0); return m_triCoordsTmp;}
         DArray<Coord>&  getTetPoints() { m_tetCoordsTmp.resize(m_tetPointSize); m_tetCoordsTmp.assign(m_coords, m_tetPointSize, 0, m_triPointSize); return m_tetCoordsTmp;}
         DArray<Coord>&  getAllPoints() { return m_coords;}
-
+		DArray<NodeType>& getVerType() { return m_verType; }
+		
 		// return Set
 		// std::shared_ptr<PointSet<TDataType>>		getPointSet()		{ return this->getPoints(); }
 		// std::shared_ptr<TriangleSet<TDataType>>		getTriangleSet()	{ return this->m_triSet;}
@@ -181,7 +182,7 @@ namespace dyno
 		DArrayList<int> m_ver2Tri;
 		DArrayList<int> m_ver2Tet;
 
-		int m_tetPointSize;
-		int m_triPointSize;
+		int m_tetPointSize = 0;
+		int m_triPointSize = 0;
 	};
 }

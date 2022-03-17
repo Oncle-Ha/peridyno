@@ -14,6 +14,7 @@ namespace dyno
 	public:
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
+		typedef typename TDataType::Matrix Mat3;
 		typedef typename TopologyModule::Pair2 Pair2;
 		typedef typename TopologyModule::Pair3 Pair3;
 		typedef typename Mat4f Mat;
@@ -31,13 +32,21 @@ namespace dyno
 
 		bool apply() override;
 
-		// void match(JointList* from, std::shared_ptr<MixSet<TDataType>> to);
+		bool shapeMatch();
+
 		void match();
 
 		/**
 		 * @brief Color of neighboring particles
 		 */
 		DEF_ARRAY_OUT(Vec3f, Color, DeviceType::GPU, "Return neighbor ids");
+
+		/**
+		 * @brief Velocity of neighboring particles
+		 */
+		DEF_ARRAY_IN(Coord, Velocity, DeviceType::GPU, "");
+		DEF_VAR_IN(Real, TimeStep, "");
+		
 	protected:
 		bool initializeImpl() override;
 
@@ -53,6 +62,9 @@ namespace dyno
 		DArray<Pair2> m_tetClusters; 
 		DArray<Pair2> m_triClusters;
 		DArray<Pair2> m_pointClusters;
+
+		// shape match
+		DArray<Coord> m_initCoord; //r_i
 
 		JointList* m_from = nullptr;
 		// std::shared_ptr<JointTree<TDataType>> m_from = nullptr;

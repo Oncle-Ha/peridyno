@@ -67,6 +67,15 @@ namespace dyno
 		
 		count[pId] = 0;
 		JCapsule cap = caps[pId];
+
+		// 削短胶囊体
+		Coord tmp_s = (cap.v1 - cap.v0);
+		Real tmp_d = tmp_s.norm();
+		Real rate =  (h / tmp_d) ;
+		if(rate > 0.5) rate = 0.5;
+		cap.v0 += rate* tmp_s;
+		cap.v1 -= rate * tmp_s;
+
 		int3 vId0 = hash.getIndex3(cap.v0);
 		int3 vId1 = hash.getIndex3(cap.v1);
 		float eps = 1e-6;
@@ -191,6 +200,14 @@ namespace dyno
 		if (pId >= caps.size()) return;
 		
 		JCapsule cap = caps[pId];
+		// 削短胶囊体
+		Coord tmp_s = (cap.v1 - cap.v0);
+		Real tmp_d = tmp_s.norm();
+		Real rate =  (h / tmp_d) ;
+		if(rate > 0.5) rate = 0.5;
+		cap.v0 += rate* tmp_s;
+		cap.v1 -= rate * tmp_s;
+
 		int3 vId0 = hash.getIndex3(cap.v0);
 		int3 vId1 = hash.getIndex3(cap.v1);
 		float eps = 1e-6;
@@ -201,6 +218,7 @@ namespace dyno
 		Coord m = cap.v0;
 		Coord s = (cap.v1 - cap.v0);
 		Real d = s.norm();
+		
 
 		// 遍历线段所覆盖的Grid
 		int3 vId = vId0;
@@ -248,7 +266,7 @@ namespace dyno
 						{
 							// PT_f("MIN", min_d, pId);
 							// printf("<id:%d dis:%f joint:%d>  pId:%d\n", nbId, min_d, cap.id_joint, pId);
-							capPairs[cnt + start] = (Pair3f(nbId, min_d, cap.id_joint));
+							capPairs[cnt + start] = (Pair3f(nbId, -min_d, cap.id_joint));
 							// PT_d("index", cnt + start, pId);
 							cnt++;
 						}

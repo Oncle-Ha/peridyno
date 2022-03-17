@@ -34,15 +34,19 @@ namespace dyno
 	template<typename TDataType>
 	void MixSet<TDataType>::setTetPoints(std::vector<Coord>& pos)
 	{
-        assert(m_triPointSize > 0);
+        // assert(m_triPointSize > 0);
 
         DArray<Coord> tmp;
-        tmp.resize(m_triPointSize);
-        tmp.assign(m_coords);
+		if (m_triPointSize > 0)
+		{
+			tmp.resize(m_triPointSize);
+			tmp.assign(m_coords);
+		}
 
         m_tetPointSize = pos.size();
 		m_coords.resize(m_triPointSize + m_tetPointSize);
-		m_coords.assign(tmp, m_triPointSize, 0, 0);
+		if (m_triPointSize > 0)
+			m_coords.assign(tmp, m_triPointSize, 0, 0);
 		//FIXME bug: assign(vector)
 		// m_coords.assign(pos, m_tetPointSize, m_triPointSize, 0); 
 
@@ -179,7 +183,7 @@ namespace dyno
     {
         std::string filename_2d = filename; filename_2d.append("_2d.obj");
         std::string filename_3d = filename; filename_3d.append("_3d");
-        loadObjFile(filename_2d);
+        // loadObjFile(filename_2d);
         loadTetFile(filename_3d);
 
 		this->setEdges();

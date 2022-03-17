@@ -143,11 +143,11 @@ namespace dyno
             getQuat(this->CurTranslation, this->CurRotation, this->CurScaling[0]);
 
         }
-
-            printf("[Root] Cur QuatR: (%f)\n", this->GlR.w);
-            printf("[Root] T: (%f, %f, %f)\n", this->CurTranslation[0], this->CurTranslation[1], this->CurTranslation[2]);
-            printf("[Root] R: (%f, %f, %f)\n", this->CurRotation[0], this->CurRotation[1], this->CurRotation[2]);
-            printf("[Root] S: (%f)\n", this->CurScaling[0]);
+            //DEBUG
+            // printf("[Root] Cur QuatR: (%f)\n", this->GlR.w);
+            // printf("[Root] T: (%f, %f, %f)\n", this->CurTranslation[0], this->CurTranslation[1], this->CurTranslation[2]);
+            // printf("[Root] R: (%f, %f, %f)\n", this->CurRotation[0], this->CurRotation[1], this->CurRotation[2]);
+            // printf("[Root] S: (%f)\n", this->CurScaling[0]);
     }
 
     template<typename TDataType>
@@ -211,7 +211,11 @@ namespace dyno
         if (AnimTranslation != nullptr)
         applyAnimationByOne(LclTranslation, CurTranslation, AnimTranslation, ptime);
         if (AnimRotation != nullptr)
-        applyAnimationByOne(LclRotation, CurRotation, AnimRotation, ptime);
+        {
+            applyAnimationByOne(LclRotation, CurRotation, AnimRotation, ptime);
+            // if (AnimRotation->m_maxSize > 1)
+            //     CurRotation += Coord(0,0, -0.5);
+        }
         if (AnimScaling != nullptr)
         applyAnimationByOne(LclScaling, CurScaling, AnimScaling, ptime);
     }
