@@ -50,7 +50,7 @@ namespace dyno {
 
 		//save screenshot to file
 		bool saveScreen(const std::string &file_name) const;  //save to file with given name
-		bool saveScreen();                                    //save to file with default name "screen_capture_XXX.png"
+		bool saveScreen(int folderIndex);                                    //save to file with default name "screen_capture_XXX.png"
 
 		void enableSaveScreen() { mSaveScreenToggle = true; }
 		void disableSaveScreen() { mSaveScreenToggle = false; };
@@ -116,7 +116,7 @@ namespace dyno {
 		int mSaveScreenInterval = 1;
 
 		//current screen capture file index
-		uint mSaveScreenIndex;
+		uint mSaveScreenIndex = 0;
 
 		std::string mOutputPath;
 		std::string mWindowTitle;

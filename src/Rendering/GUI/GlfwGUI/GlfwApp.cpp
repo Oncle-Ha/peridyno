@@ -195,10 +195,10 @@ namespace dyno
 
 			if (mAnimationToggle){
 
-				if (mSaveScreenToggle)
+				if (mImWindow.saveScreen())
 				{
 					if (activeScene->getFrameNumber() % mSaveScreenInterval == 0)
-						saveScreen();
+						saveScreen(mImWindow.screenTime());
 				}
 
 				activeScene->takeOneFrame();
@@ -288,13 +288,13 @@ namespace dyno
 		return status;
 	}
 
-	bool GlfwApp::saveScreen()
+	bool GlfwApp::saveScreen(int folderIndex)
 	{
 		std::stringstream adaptor;
-		adaptor << mSaveScreenIndex++;
+		adaptor << "times_"<< folderIndex << "_screen_capture_" << mSaveScreenIndex++ << ".ppm";
 		std::string index_str;
 		adaptor >> index_str;
-		std::string file_name = mOutputPath + std::string("screen_capture_") + index_str + std::string(".ppm");
+		std::string file_name = mOutputPath + index_str;
 		return saveScreen(file_name);
 	}
 

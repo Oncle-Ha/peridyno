@@ -16,9 +16,12 @@ namespace dyno
 		void draw(RenderEngine* engine, SceneGraph* scene);
 
 		bool cameraLocked();
-
+		bool saveScreen();
+		int screenTime() { return mScreenTime;}
 	private:
 		bool mDisenableCamera = false;
+		bool mSaveScreen = false;
+		int mScreenTime = 0;
 		std::vector<std::shared_ptr<Picture>> mPics;
 	};
 }
