@@ -183,7 +183,7 @@ namespace dyno
     {
         std::string filename_2d = filename; filename_2d.append("_2d.obj");
         std::string filename_3d = filename; filename_3d.append("_3d");
-        // loadObjFile(filename_2d);
+        loadObjFile(filename_2d);
         loadTetFile(filename_3d);
 
 		this->setEdges();

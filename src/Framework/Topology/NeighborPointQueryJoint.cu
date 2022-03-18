@@ -71,7 +71,7 @@ namespace dyno
 		// 削短胶囊体
 		Coord tmp_s = (cap.v1 - cap.v0);
 		Real tmp_d = tmp_s.norm();
-		Real rate =  (h / tmp_d) ;
+		Real rate =  (h / tmp_d) * 0;
 		if(rate > 0.5) rate = 0.5;
 		cap.v0 += rate* tmp_s;
 		cap.v1 -= rate * tmp_s;
@@ -203,7 +203,7 @@ namespace dyno
 		// 削短胶囊体
 		Coord tmp_s = (cap.v1 - cap.v0);
 		Real tmp_d = tmp_s.norm();
-		Real rate =  (h / tmp_d) ;
+		Real rate =  (h / tmp_d) * 0;
 		if(rate > 0.5) rate = 0.5;
 		cap.v0 += rate* tmp_s;
 		cap.v1 -= rate * tmp_s;

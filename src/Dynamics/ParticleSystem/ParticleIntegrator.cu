@@ -26,14 +26,14 @@ namespace dyno
 			m_prePosition.assign(this->inPosition()->getData());
 			m_preVelocity.assign(this->inVelocity()->getData());
 
-			this->inForceDensity()->getDataPtr()->reset();
+			
 		}
 	}
 
 	template<typename TDataType>
 	void ParticleIntegrator<TDataType>::end()
 	{
-
+		this->inForceDensity()->getDataPtr()->reset();
 	}
 
 	template<typename Real, typename Coord>
@@ -45,7 +45,6 @@ namespace dyno
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= forceDensity.size()) return;
-
 		vel[pId] += dt * (forceDensity[pId] + gravity);
 	}
 

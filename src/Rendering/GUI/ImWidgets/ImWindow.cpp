@@ -176,12 +176,13 @@ void dyno::ImWindow::draw(RenderEngine* engine, SceneGraph* scene)
 		{
 			std::string rEngineName = engine->name();
 			ImGui::Begin("Bottom Left widget", NULL, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
-			ImGui::toggleButton(ICON_FA_FILE_IMAGE " Capture", &(mSaveScreen));
-			ImGui::SameLine();
 
-			char buf[32];
-            sprintf(buf, ICON_FA_FOLDER " %d", mScreenTime);
-			if (ImGui::Button(buf)) mScreenTime++;
+			// ImGui::toggleButton(ICON_FA_FILE_IMAGE " Capture", &(mSaveScreen));
+			// ImGui::SameLine();
+
+			// char buf[32];
+            // sprintf(buf, ICON_FA_FOLDER " %d", mScreenTime);
+			// if (ImGui::Button(buf)) mScreenTime++;
 			ImGui::Text("Rendered by %s: %.1f FPS", rEngineName.c_str(), ImGui::GetIO().Framerate);
 			ImGui::SetWindowPos(ImVec2(rparams->viewport.w - ImGui::GetWindowSize().x, rparams->viewport.h - ImGui::GetWindowSize().y));
 			ImGui::End();

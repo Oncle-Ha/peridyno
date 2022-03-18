@@ -35,6 +35,10 @@ namespace dyno
 		bool shapeMatch();
 
 		void match();
+		void animByQuat();
+		void animByMatrix();
+
+		void animByVir(); //更新虚粒子带来的弹力
 
 		/**
 		 * @brief Color of neighboring particles
@@ -45,6 +49,12 @@ namespace dyno
 		 * @brief Velocity of neighboring particles
 		 */
 		DEF_ARRAY_IN(Coord, Velocity, DeviceType::GPU, "");
+
+		/**
+		 * @brief Force of neighboring particles
+		 */
+		DEF_ARRAY_IN(Coord, Force, DeviceType::GPU, "");
+
 		DEF_VAR_IN(Real, TimeStep, "");
 		
 	protected:
@@ -69,7 +79,7 @@ namespace dyno
 		JointList* m_from = nullptr;
 		// std::shared_ptr<JointTree<TDataType>> m_from = nullptr;
 		std::shared_ptr<MixSet<TDataType>> m_to = nullptr;
-		
+		DArray<Coord> m_virtualCoord; // 虚拟点坐标
 	
 		std::vector<Mat> m_initInvTransform; // X2 = M2 M1^-1 X1
 		DArray<Quat<Real>> m_initQuatT;			

@@ -17,6 +17,9 @@
 #include <GLPointVisualModule.h>
 #include <GLSurfaceVisualModule.h>
 
+#include <Module/CalculateNorm.h>
+#include <ColorMapping.h>
+
 using namespace dyno;
 
 // TODO: move to Topology
@@ -205,8 +208,8 @@ std::shared_ptr<SceneGraph> createScene()
 {
 	std::shared_ptr<SceneGraph> scene = std::make_shared<SceneGraph>();
 
-	scene->setGravity(Vec3f(0, -4.8f, 0));
-	// scene->setGravity(Vec3f(0, 0, 0));
+	// scene->setGravity(Vec3f(0, -9.8f, 0));
+	scene->setGravity(Vec3f(0, 0, 0));
 	// set scene
 	auto root = scene->addNode(std::make_shared<StaticBoundary<DataType3f>>());
 	root->loadCube(Vec3f(0), Vec3f(1), 0.005f, true);
@@ -221,7 +224,7 @@ std::shared_ptr<SceneGraph> createScene()
 	//dolphin->setMass(1.0f);
 
 	dolphin->loadMixFile("../../data/dolphin/Dolphin");
-	loadFBX("../../data/dolphin/Dolphin_Particles_Sub.fbx");
+	loadFBX("../../data/dolphin/Dolphin_Particles_SubAnimRMaya.fbx");
 	// 顺序：缩放，平移
 	dolphin->scale(0.2f);
 	dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
@@ -241,21 +244,36 @@ std::shared_ptr<SceneGraph> createScene()
 
 	// engine = new GLRenderEngine;
 	// set point 
-	
-	auto pointRenderer = std::make_shared<GLPointVisualModule>();
-	pointRenderer->setColor(Vec3f(1, 0, 0));
-	pointRenderer->setColorMapMode(GLPointVisualModule::PER_VERTEX_SHADER);
-	pointRenderer->setColorMapRange(0, 1);
-	//dolphin->getSurfaceNode()->currentTopology()->connect(pointRenderer->inPointSet());
-	//dolphin->getSurfaceNode()->graphicsPipeline()->pushModule(pointRenderer);
+	{
+		// force color
+		
+		// auto calculateNorm = std::make_shared<CalculateNorm<DataType3f>>();
+		// dolphin->stateForce()->connect(calculateNorm->inVec());
+		// dolphin->graphicsPipeline()->pushModule(calculateNorm);
 
-	dolphin->currentTopology()->connect(pointRenderer->inPointSet());
-	// dolphin->stateVelocity()->connect(pointRenderer->inColor());
-	dolphin->currentColor()->connect(pointRenderer->inColor()); //DEBUG
+		// auto colorMapper = std::make_shared<ColorMapping<DataType3f>>();
+		// colorMapper->varMax()->setValue(50.f);
+		// colorMapper->varMin()->setValue(-50.f);
+		// calculateNorm->outNorm()->connect(colorMapper->inScalar());
+		// dolphin->graphicsPipeline()->pushModule(colorMapper);
 
-	dolphin->graphicsPipeline()->pushModule(pointRenderer);
+		// auto pointRenderer = std::make_shared<GLPointVisualModule>();
+		// pointRenderer->setColor(Vec3f(1, 0, 0));
+		// pointRenderer->setColorMapMode(GLPointVisualModule::PER_VERTEX_SHADER);
+		// pointRenderer->setColorMapRange(0, 1);
+		
+		// dolphin->currentTopology()->connect(pointRenderer->inPointSet());
+		// colorMapper->outColor()->connect(pointRenderer->inColor());
+		dolphin->currentColor()->connect(pointRenderer->inColor()); //DEBUG
 
-	pointRenderer->setVisible(true);
+		// SurfaceNode pointRenderer
+		//dolphin->getSurfaceNode()->currentTopology()->connect(pointRenderer->inPointSet());
+		//dolphin->getSurfaceNode()->graphicsPipeline()->pushModule(pointRenderer);
+
+		dolphin->graphicsPipeline()->pushModule(pointRenderer);
+
+		pointRenderer->setVisible(true);
+	}
 	
 
 	// set surface

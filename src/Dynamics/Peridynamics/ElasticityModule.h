@@ -86,9 +86,12 @@ namespace dyno {
 		 * @brief Lame parameters
 		 * m_lambda controls the isotropic part while mu controls the deviatoric part.
 		 */
-		DEF_VAR(Real, Mu, 0.001, "Lame parameters: mu");
+		// DEF_VAR(Real, Mu, 0.001, "Lame parameters: mu");
 
-		DEF_VAR(Real, Lambda, 0.01, "Lame parameters: lambda");
+		// DEF_VAR(Real, Lambda, 0.01, "Lame parameters: lambda");
+		DEF_VAR(Real, Mu, 0.0001, "Lame parameters: mu");
+
+		DEF_VAR(Real, Lambda, 0.001, "Lame parameters: lambda");		
 
 		DEF_VAR(uint, IterationNumber, 10, "Iteration number");
 

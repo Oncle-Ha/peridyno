@@ -201,8 +201,8 @@ namespace dyno
     template<typename TDataType>
     void JointTree<TDataType>::applyAnimationByOne(Coord& init, Coord& cur, std::shared_ptr<AnimationCurve<TDataType>>& anim, Real ptime)
     {
-        // cur = anim->getCurveValueAll(ptime);
-        cur = anim->getCurveValueCycle(ptime);
+        cur = anim->getCurveValueAll(ptime);
+        // cur = anim->getCurveValueCycle(ptime);
     }
 
     template<typename TDataType>
@@ -213,8 +213,8 @@ namespace dyno
         if (AnimRotation != nullptr)
         {
             applyAnimationByOne(LclRotation, CurRotation, AnimRotation, ptime);
-            // if (AnimRotation->m_maxSize > 1)
-            //     CurRotation += Coord(0,0, -0.5);
+            // if (AnimRotation->m_maxSize > 1 && CurRotation[2] < 90)
+                // CurRotation += Coord(0,0, 0.5);
         }
         if (AnimScaling != nullptr)
         applyAnimationByOne(LclScaling, CurScaling, AnimScaling, ptime);

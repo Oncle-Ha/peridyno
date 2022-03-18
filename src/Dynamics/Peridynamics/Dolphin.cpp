@@ -9,6 +9,8 @@
 #include "Peridynamics/Peridynamics.h"
 #include "SharedFunc.h"
 
+
+
 namespace dyno
 {
     IMPLEMENT_TCLASS(Dolphin, TDataType)
@@ -20,49 +22,53 @@ namespace dyno
 
         auto mixSet = std::make_shared<MixSet<TDataType>>();
 		this->currentTopology()->setDataPtr(mixSet);
-        // this->currentPoints()->setDataPtr(mixSet->getPointSet());
 
         this->varHorizon()->setValue(0.0085);
-
-		auto peri = std::make_shared<Peridynamics<TDataType>>();
-		this->varTimeStep()->connect(peri->inTimeStep());
-		this->statePosition()->connect(peri->inPosition());
-		this->stateVelocity()->connect(peri->inVelocity());
-		this->stateForce()->connect(peri->inForce());
-		this->currentRestShape()->connect(peri->inRestShape());
-		this->animationPipeline()->pushModule(peri);// 暂时只控制点集
+        // Peridynamics
+        {
+            auto peri = std::make_shared<Peridynamics<TDataType>>();
+            this->varTimeStep()->connect(peri->inTimeStep());
+            this->statePosition()->connect(peri->inPosition());
+            this->stateVelocity()->connect(peri->inVelocity());
+            this->stateForce()->connect(peri->inForce());
+            this->currentRestShape()->connect(peri->inRestShape());
+            this->animationPipeline()->pushModule(peri);// 暂时只控制点集
+        }
 
 		//Create a node for surface mesh rendering
-		// m_surfaceNode = this->template createAncestor<Node>("Mesh");
-        m_surfaceNode = std::make_shared<Node>("Mesh");
-        
-		// auto triSet = m_surfaceNode->template setTopologyModule<TriangleSet<TDataType>>("surface_mesh");
-        auto triSet = std::make_shared<TriangleSet<TDataType>>();
-		m_surfaceNode->currentTopology()->setDataPtr(triSet);
+        {
+            // m_surfaceNode = this->template createAncestor<Node>("Mesh");
+            m_surfaceNode = std::make_shared<Node>("Mesh");
+            
+            // auto triSet = m_surfaceNode->template setTopologyModule<TriangleSet<TDataType>>("surface_mesh");
+            auto triSet = std::make_shared<TriangleSet<TDataType>>();
+            m_surfaceNode->currentTopology()->setDataPtr(triSet);
+            
+            //Set the topology mapping from MixSet to TriangleSet
+            // auto surfaceMapping = this->template addTopologyMapping<PointSetToPointSet<TDataType>>("surface_mapping");
+            // auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
 
-		//Set the topology mapping from MixSet to TriangleSet
-		// auto surfaceMapping = this->template addTopologyMapping<PointSetToPointSet<TDataType>>("surface_mapping");
-        auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
-
-		// surfaceMapping->setFrom(ptSet);
-		// surfaceMapping->setTo(triSet);        
+            // surfaceMapping->setFrom(ptSet);
+            // surfaceMapping->setTo(triSet);        
+        }
 
         // Set the Topology mapping from Capsule(JointTree) to MixSet 
         // 1.Module.update()
         // 2.Mapping.apply()
-        auto jointMapping = this->template addTopologyMapping<CapsuleToMixSet<TDataType>>("joint_mapping");
-        jointMapping->setFrom(&m_jointMap);
-        jointMapping->setTo(mixSet);
-        // jointMapping->setCapsuleRadius(0.0125);
-		jointMapping->setCapsuleRadius(0.0325);
-        // jointMapping->setCapsuleRadius(0.055);
-        // jointMapping->setCapsuleRadius(0.085);
-        
-        this->currentColor()->connect(jointMapping->outColor());
-        this->stateVelocity()->connect(jointMapping->inVelocity());
-        this->varTimeStep()->connect(jointMapping->inTimeStep());
-        // jointMapping->outColor()->connect(this->currentColor());
-
+        {
+            auto jointMapping = this->template addTopologyMapping<CapsuleToMixSet<TDataType>>("joint_mapping");
+            jointMapping->setFrom(&m_jointMap);
+            jointMapping->setTo(mixSet);
+            // jointMapping->setCapsuleRadius(0.0125);
+            jointMapping->setCapsuleRadius(0.0325);
+            // jointMapping->setCapsuleRadius(0.055);
+            // jointMapping->setCapsuleRadius(0.085);
+            
+            this->currentColor()->connect(jointMapping->outColor());
+            this->stateVelocity()->connect(jointMapping->inVelocity());
+            this->stateForce()->connect(jointMapping->inForce());
+            this->varTimeStep()->connect(jointMapping->inTimeStep());
+        }
     }
 
     template<typename TDataType>
@@ -110,7 +116,7 @@ namespace dyno
 			this->statePosition()->getData().assign(pts);
 			this->stateVelocity()->getDataPtr()->reset();
 		}
-		Node::resetStates();        
+		Node::resetStates();
 
         //Update Neighbor & RefPosition
 		auto nbrQuery = std::make_shared<NeighborPointQuery<TDataType>>();
@@ -144,18 +150,21 @@ namespace dyno
         auto& curPos = this->statePosition()->getData();
         pts.assign(curPos);
 
-        //DEBUG
-        for (auto joint : m_jointMap)
+        //if (int (this->varElapsedTime()->getData() * 240 ) % 2 == 0)
         {
-            joint->applyAnimationAll(this->varElapsedTime()->getData());
-            // joint->applyAnimationAll(0.05);
-        }
-
-        auto tMappings = this->getTopologyMappingList();
-        for(auto iter = tMappings.begin(); iter != tMappings.end(); iter++){
-            (*iter)->apply();
-        }
+            //DEBUG
+            for (auto joint : m_jointMap)
+            {
+                joint->applyAnimationAll(this->varElapsedTime()->getData());
+                // joint->applyAnimationAll(0.05);
+            }
         
+
+            auto tMappings = this->getTopologyMappingList();
+            for(auto iter = tMappings.begin(); iter != tMappings.end(); iter++){
+                (*iter)->apply();
+            }
+        }
 
         //DEBUG
         curPos.assign(pts);
