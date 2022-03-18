@@ -224,7 +224,7 @@ std::shared_ptr<SceneGraph> createScene()
 	//dolphin->setMass(1.0f);
 
 	dolphin->loadMixFile("../../data/dolphin/Dolphin");
-	loadFBX("../../data/dolphin/Dolphin_Particles_SubAnimRMaya.fbx");
+	loadFBX("../../data/dolphin/Dolphin_Particles_SubAnimLMaya.fbx");
 	// 顺序：缩放，平移
 	dolphin->scale(0.2f);
 	dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
@@ -247,24 +247,24 @@ std::shared_ptr<SceneGraph> createScene()
 	{
 		// force color
 		
-		// auto calculateNorm = std::make_shared<CalculateNorm<DataType3f>>();
-		// dolphin->stateForce()->connect(calculateNorm->inVec());
-		// dolphin->graphicsPipeline()->pushModule(calculateNorm);
+		auto calculateNorm = std::make_shared<CalculateNorm<DataType3f>>();
+		dolphin->stateForce()->connect(calculateNorm->inVec());
+		dolphin->graphicsPipeline()->pushModule(calculateNorm);
 
-		// auto colorMapper = std::make_shared<ColorMapping<DataType3f>>();
-		// colorMapper->varMax()->setValue(50.f);
-		// colorMapper->varMin()->setValue(-50.f);
-		// calculateNorm->outNorm()->connect(colorMapper->inScalar());
-		// dolphin->graphicsPipeline()->pushModule(colorMapper);
+		auto colorMapper = std::make_shared<ColorMapping<DataType3f>>();
+		colorMapper->varMax()->setValue(50.f);
+		colorMapper->varMin()->setValue(-50.f);
+		calculateNorm->outNorm()->connect(colorMapper->inScalar());
+		dolphin->graphicsPipeline()->pushModule(colorMapper);
 
-		// auto pointRenderer = std::make_shared<GLPointVisualModule>();
-		// pointRenderer->setColor(Vec3f(1, 0, 0));
-		// pointRenderer->setColorMapMode(GLPointVisualModule::PER_VERTEX_SHADER);
-		// pointRenderer->setColorMapRange(0, 1);
+		auto pointRenderer = std::make_shared<GLPointVisualModule>();
+		pointRenderer->setColor(Vec3f(1, 0, 0));
+		pointRenderer->setColorMapMode(GLPointVisualModule::PER_VERTEX_SHADER);
+		pointRenderer->setColorMapRange(0, 1);
 		
-		// dolphin->currentTopology()->connect(pointRenderer->inPointSet());
-		// colorMapper->outColor()->connect(pointRenderer->inColor());
-		dolphin->currentColor()->connect(pointRenderer->inColor()); //DEBUG
+		dolphin->currentTopology()->connect(pointRenderer->inPointSet());
+		colorMapper->outColor()->connect(pointRenderer->inColor());
+		// dolphin->currentColor()->connect(pointRenderer->inColor()); //DEBUG
 
 		// SurfaceNode pointRenderer
 		//dolphin->getSurfaceNode()->currentTopology()->connect(pointRenderer->inPointSet());

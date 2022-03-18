@@ -897,7 +897,7 @@ namespace dyno
 		int numPair = m_pointClusters.size();
 
 		// Set Color
-		
+		/*
 		{
 			std::vector<Vec3f> v_color(default_color, default_color + 12);
 			DArray<Vec3f> d_color;
@@ -922,7 +922,7 @@ namespace dyno
 				d_color);
 			cuSynchronize();
 		}
-		
+		*/
 		
 		
 		// Set Rigid Shape

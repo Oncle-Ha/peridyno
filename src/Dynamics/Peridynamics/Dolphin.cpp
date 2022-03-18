@@ -64,7 +64,7 @@ namespace dyno
             // jointMapping->setCapsuleRadius(0.055);
             // jointMapping->setCapsuleRadius(0.085);
             
-            this->currentColor()->connect(jointMapping->outColor());
+            // this->currentColor()->connect(jointMapping->outColor());
             this->stateVelocity()->connect(jointMapping->inVelocity());
             this->stateForce()->connect(jointMapping->inForce());
             this->varTimeStep()->connect(jointMapping->inTimeStep());
