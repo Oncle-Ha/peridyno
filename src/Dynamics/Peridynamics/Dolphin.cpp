@@ -152,7 +152,7 @@ namespace dyno
 
         //if (int (this->varElapsedTime()->getData() * 240 ) % 2 == 0)
         {
-            //DEBUG
+            //Animation
             for (auto joint : m_jointMap)
             {
                 joint->applyAnimationAll(this->varElapsedTime()->getData());

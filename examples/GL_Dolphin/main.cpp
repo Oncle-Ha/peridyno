@@ -208,8 +208,8 @@ std::shared_ptr<SceneGraph> createScene()
 {
 	std::shared_ptr<SceneGraph> scene = std::make_shared<SceneGraph>();
 
-	// scene->setGravity(Vec3f(0, -9.8f, 0));
-	scene->setGravity(Vec3f(0, 0, 0));
+	scene->setGravity(Vec3f(0, -9.8f, 0));
+	// scene->setGravity(Vec3f(0, 0, 0));
 	// set scene
 	auto root = scene->addNode(std::make_shared<StaticBoundary<DataType3f>>());
 	root->loadCube(Vec3f(0), Vec3f(1), 0.005f, true);
@@ -224,7 +224,7 @@ std::shared_ptr<SceneGraph> createScene()
 	//dolphin->setMass(1.0f);
 
 	dolphin->loadMixFile("../../data/dolphin/Dolphin");
-	loadFBX("../../data/dolphin/Dolphin_Particles_SubAnimLMaya.fbx");
+	loadFBX("../../data/dolphin/Dolphin_Particles_Sub.fbx");
 	// 顺序：缩放，平移
 	dolphin->scale(0.2f);
 	dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));

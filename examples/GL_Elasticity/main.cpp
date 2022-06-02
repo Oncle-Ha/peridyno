@@ -22,7 +22,7 @@ int main()
 	auto bunny = scn->addNode(std::make_shared<ElasticBody<DataType3f>>());
 	bunny->connect(root->importParticleSystems());
 
-	bunny->setMass(1.0);
+	//bunny->setMass(1.0);
 	// bunny->loadParticles("../../data/bunny/bunny_points.obj");
 	// bunny->loadSurface("../../data/bunny/bunny_mesh.obj");
 	bunny->loadParticles("../../data/dolphin/Dolphin_points.obj");

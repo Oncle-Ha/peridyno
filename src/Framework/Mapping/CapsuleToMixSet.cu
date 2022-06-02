@@ -557,7 +557,7 @@ namespace dyno
 			new_R.assign(p_R);
 			new_S.assign(p_S);
 			
-			
+			// TODO 改为刚体变换
 			cuExecute(numPair,
 				CM_ApplyOriginTransformPointByQuat,
 				m_pointClusters,
