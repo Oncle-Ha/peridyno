@@ -6,13 +6,15 @@
 #include "Object.h"
 #include "NodeIterator.h"
 #include "NodePort.h"
+#include "Action.h"
+#include "DirectedAcyclicGraph.h"
+#include "AutoLayoutDAG.h"
 #include "SceneGraphFactory.h"
 
 #include <QtWidgets/QMessageBox>
 
 namespace Qt
 {
-
 	QtNodeFlowScene::QtNodeFlowScene(std::shared_ptr<QtDataModelRegistry> registry, QObject* parent)
 		: QtFlowScene(registry, parent)
 	{
@@ -43,30 +45,30 @@ namespace Qt
 					return dat;
 				};
 
-				QString category = "Default";// QString::fromStdString(module->getModuleType());
+				QString category = QString::fromStdString(node->getNodeType());
 				ret->registerModel<QtNodeWidget>(category, creator);
 			}
 		}
-
+	
 		this->setRegistry(ret);
 
-		auto scn = dyno::SceneGraphFactory::instance()->active();
-		showSceneGraph(scn.get());
+		showSceneGraph();
+		reorderAllNodes();
 
 		connect(this, &QtFlowScene::nodeMoved, this, &QtNodeFlowScene::moveModulePosition);
 		connect(this, &QtFlowScene::nodePlaced, this, &QtNodeFlowScene::addNodeToSceneGraph);
 		connect(this, &QtFlowScene::nodeDeleted, this, &QtNodeFlowScene::deleteNodeToSceneGraph);
 	}
 
-
 	QtNodeFlowScene::~QtNodeFlowScene()
 	{
 		clearScene();
 	}
 
-
-	void QtNodeFlowScene::showSceneGraph(SceneGraph* scn)
+	void QtNodeFlowScene::showSceneGraph()
 	{
+		auto scn = dyno::SceneGraphFactory::instance()->active();
+
 		std::map<dyno::ObjectId, QtNode*> nodeMap;
 
 		//auto root = scn->getRootNode();
@@ -94,7 +96,7 @@ namespace Qt
 		{
 			addNodeWidget(it.get());
 		}
-
+		
 		auto createNodeConnections = [&](std::shared_ptr<Node> nd) -> void
 		{
 			auto inId = nd->objectId();
@@ -178,52 +180,286 @@ namespace Qt
 				}
 			}
 		};
-
+	
 		for (auto it = scn->begin(); it != scn->end(); it++)
 		{
 			createNodeConnections(it.get());
 		}
 
-		// 	clearScene();
-		// 
-		for (auto it = scn->begin(); it != scn->end(); it++)
-		{
-			auto node_ptr = it.get();
-			std::cout << node_ptr->getClassInfo()->getClassName() << ": " << node_ptr.use_count() << std::endl;
-		}
+// 		// 	clearScene();
+// 		// 
+// 		for (auto it = scn->begin(); it != scn->end(); it++)
+// 		{
+// 			auto node_ptr = it.get();
+// 			std::cout << node_ptr->getClassInfo()->getClassName() << ": " << node_ptr.use_count() << std::endl;
+// 		}
+
 		nodeMap.clear();
+	}
+
+	void QtNodeFlowScene::updateSceneGraph()
+	{
+		disableEditing();
+
+		clearScene();
+
+		showSceneGraph();
+
+		enableEditing();
+	}
+
+	void QtNodeFlowScene::fieldUpdated(dyno::FBase* field, int status)
+	{
+		disableEditing();
+
+		clearScene();
+
+		auto f = status == Qt::Checked ? field->promoteOuput() : field->demoteOuput();
+
+		showSceneGraph();
+
+		enableEditing();
 	}
 
 	void QtNodeFlowScene::moveModulePosition(QtNode& n, const QPointF& newLocation)
 	{
+		auto nodeData = dynamic_cast<QtNodeWidget*>(n.nodeDataModel());
 
+		if (mEditingEnabled && nodeData != nullptr) {
+			auto node = nodeData->getNode();
+			node->setBlockCoord(newLocation.x(), newLocation.y());
+		}
 	}
 
 	void QtNodeFlowScene::addNodeToSceneGraph(QtNode& n)
 	{
 		auto nodeData = dynamic_cast<QtNodeWidget*>(n.nodeDataModel());
 
-		printf("Use count before add: %d \n", nodeData->getNode().use_count());
-
-		if (nodeData != nullptr) {
+		if (mEditingEnabled && nodeData != nullptr) {
 			auto scn = dyno::SceneGraphFactory::instance()->active();
 			scn->addNode(nodeData->getNode());
 		}
+	}
 
-		printf("Use count after add: %d \n", nodeData->getNode().use_count());
+	void QtNodeFlowScene::addNodeByString(std::string NodeName) {
+		std::cout << NodeName << std::endl;
+
+		auto node_obj = dyno::Object::createObject(NodeName);
+		std::shared_ptr<dyno::Node> new_node(dynamic_cast<dyno::Node*>(node_obj));
+		auto dat = std::make_unique<QtNodeWidget>(std::move(new_node));
+	
+		if (dat != nullptr) {
+			auto scn = dyno::SceneGraphFactory::instance()->active();
+			scn->addNode(dat->getNode());
+		}
+		else {
+			std::cout << "nullptr" << std::endl;
+		}
+		int mId;
+		auto addNodeWidget = [&](std::shared_ptr<Node> m) -> void
+		{
+			mId = m->objectId();
+
+			auto type = std::make_unique<QtNodeWidget>(m);
+
+			auto& node = this->createNode(std::move(type));
+
+			QPointF posView(m->bx(), m->by());
+
+			node.nodeGraphicsObject().setPos(posView);
+
+			this->nodePlaced(node);
+		};
+		auto scn = dyno::SceneGraphFactory::instance()->active();
+		int x = 0;
+		for (auto it = scn->begin(); it != scn->end(); it++)
+		{
+			if(x== mId){
+				addNodeWidget(it.get());
+				break;
+			}
+			x++;
+		}
+		addNodeWidget(dat->getNode());
+	}
+
+	void QtNodeFlowScene::enableEditing()
+	{
+		mEditingEnabled = true;
+
+		auto& allNodes = this->allNodes();
+
+		for each (auto node in allNodes)
+		{
+			auto model = dynamic_cast<QtNodeWidget*>(node->nodeDataModel());
+			if (model != nullptr)
+			{
+				model->enableEditing();
+			}
+		}
+	}
+
+	void QtNodeFlowScene::disableEditing()
+	{
+		mEditingEnabled = false;
+
+		auto& allNodes = this->allNodes();
+
+		for each (auto node in allNodes)
+		{
+			auto model = dynamic_cast<QtNodeWidget*>(node->nodeDataModel());
+			if (model != nullptr)
+			{
+				model->disableEditing();
+			}
+		}
 	}
 
 	void QtNodeFlowScene::deleteNodeToSceneGraph(QtNode& n)
 	{
 		auto nodeData = dynamic_cast<QtNodeWidget*>(n.nodeDataModel());
 
-		printf("Use count before: %d \n", nodeData->getNode().use_count());
-		if (nodeData != nullptr) {
+		if (mEditingEnabled && nodeData != nullptr) {
 			auto scn = dyno::SceneGraphFactory::instance()->active();
 			scn->deleteNode(nodeData->getNode());
 		}
-
-		printf("Use count after: %d \n", nodeData->getNode().use_count());
 	}
 
+	void QtNodeFlowScene::dynoNodePlaced(std::shared_ptr<dyno::Node> node)
+	{
+		if (node == nullptr)
+			return;
+
+		auto qNodeWdiget = std::make_unique<QtNodeWidget>(node);
+		auto& qNode = createNode(std::move(qNodeWdiget));
+
+		emit nodePlaced(qNode);
+	}
+
+	void QtNodeFlowScene::reorderAllNodes()
+	{
+		auto scn = dyno::SceneGraphFactory::instance()->active();
+
+		dyno::DirectedAcyclicGraph graph;
+
+		auto constructDAG = [&](std::shared_ptr<Node> nd) -> void
+		{
+			auto inId = nd->objectId();
+
+			auto ports = nd->getImportNodes();
+
+			for (int i = 0; i < ports.size(); i++)
+			{
+				dyno::NodePortType pType = ports[i]->getPortType();
+				if (dyno::Single == pType)
+				{
+					auto node = ports[i]->getNodes()[0];
+					if (node != nullptr)
+					{
+						auto outId = node->objectId();
+						
+						graph.addEdge(outId, inId);
+					}
+				}
+				else if (dyno::Multiple == pType)
+				{
+					auto& nodes = ports[i]->getNodes();
+					for (int j = 0; j < nodes.size(); j++)
+					{
+						if (nodes[j] != nullptr)
+						{
+							auto outId = nodes[j]->objectId();
+							
+							graph.addEdge(outId, inId);
+						}
+					}
+					//nodes.clear();
+				}
+			}
+
+			auto fieldInp = nd->getInputFields();
+			for (int i = 0; i < fieldInp.size(); i++)
+			{
+				auto fieldSrc = fieldInp[i]->getSource();
+				if (fieldSrc != nullptr) {
+					auto parSrc = fieldSrc->parent();
+					if (parSrc != nullptr)
+					{
+						Node* nodeSrc = dynamic_cast<Node*>(parSrc);
+
+						auto outId = nodeSrc->objectId();
+						
+						graph.addEdge(outId, inId);
+					}
+				}
+			}
+		};
+
+		for (auto it = scn->begin(); it != scn->end(); it++)
+		{
+			constructDAG(it.get());
+		}
+
+
+		dyno::AutoLayoutDAG layout(&graph);
+ 		layout.update();
+
+		//Set up the mapping from ObjectId to QtNode
+		auto& _nodes = this->nodes();
+		std::map<dyno::ObjectId, QtNode*> qtNodeMapper;
+		std::map<dyno::ObjectId, Node*> nodeMapper;
+		for (auto const& _node : _nodes)
+		{
+			auto const& qtNode = _node.second;
+			auto model = qtNode->nodeDataModel();
+
+			auto nodeData = dynamic_cast<QtNodeWidget*>(model);
+
+			if (model != nullptr)
+			{
+				auto node = nodeData->getNode();
+				if (node != nullptr)
+				{
+					qtNodeMapper[node->objectId()] = qtNode.get();
+					nodeMapper[node->objectId()] = node.get();
+				}
+			}
+		}
+
+		float offsetX = 0.0f;
+		for (size_t l = 0; l < layout.layerNumber(); l++)
+		{
+			auto& xc = layout.layer(l);
+
+			float offsetY = 0.0f;
+			float xMax = 0.0f;
+			for (size_t index = 0; index < xc.size(); index++)
+			{
+				dyno::ObjectId id = xc[index];
+				if (qtNodeMapper.find(id) != qtNodeMapper.end())
+				{
+					QtNode* qtNode = qtNodeMapper[id];
+					NodeGeometry& geo = qtNode->nodeGeometry();
+
+					float w = geo.width();
+					float h = geo.height();
+
+					xMax = std::max(xMax, w);
+
+					Node* node = nodeMapper[id];
+
+					node->setBlockCoord(offsetX, offsetY);
+
+					offsetY += (h + mDy);
+				}
+			}
+
+			offsetX += (xMax + mDx);
+		}
+
+		qtNodeMapper.clear();
+		nodeMapper.clear();
+
+		updateSceneGraph();
+	}
 }

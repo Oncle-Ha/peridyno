@@ -49,6 +49,11 @@ std::string Node::getName()
 	return m_node_name;
 }
 
+std::string Node::getNodeType()
+{
+	return "Default";
+}
+
 bool Node::isControllable()
 {
 	return m_controllable;
@@ -92,6 +97,11 @@ void Node::setDt(Real dt)
 void Node::setSceneGraph(SceneGraph* scn)
 {
 	mSceneGraph = scn;
+}
+
+SceneGraph* Node::getSceneGraph()
+{
+	return mSceneGraph;
 }
 
 Node* Node::addAncestor(Node* anc)
@@ -143,7 +153,9 @@ void Node::update()
 
 void Node::reset()
 {
-	this->resetStates();
+	if (this->validateInputs()) {
+		this->resetStates();
+	}
 }
 
 void Node::postUpdateStates()
@@ -273,6 +285,9 @@ bool Node::addModule(std::shared_ptr<Module> module)
 void Node::initialize()
 {
 	this->resetStates();
+
+	this->animationPipeline()->updateExecutionQueue();
+	this->graphicsPipeline()->updateExecutionQueue();
 }
 
 bool Node::deleteModule(std::shared_ptr<Module> module)
@@ -385,7 +400,7 @@ bool Node::attachField(FBase* field, std::string name, std::string desc, bool au
 	auto fType = field->getFieldType();
 	switch (field->getFieldType())
 	{
-	case FieldTypeEnum::Current:
+	case FieldTypeEnum::State:
 		ret = this->addField(field);
 		break;
 

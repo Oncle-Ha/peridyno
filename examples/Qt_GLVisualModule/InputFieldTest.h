@@ -16,6 +16,7 @@
 
 #pragma once
 #include "Node.h"
+#include "FilePath.h"
 
 #include "Topology/PointSet.h"
 
@@ -24,7 +25,7 @@ namespace dyno
 	template<typename TDataType>
 	class InputFieldTest : public Node
 	{
-		DECLARE_TCLASS(GLPointVisualNode, TDataType)
+		DECLARE_TCLASS(InputFieldTest, TDataType)
 	public:
 		typedef typename TDataType::Coord Coord;
 
@@ -32,6 +33,10 @@ namespace dyno
 
 	public:
 		void updateStates() override;
+
+		DEF_VAR(Real, Variable, Real(0.1), "Test a variable range");
+
+		DEF_VAR(FilePath, FileName, std::string(""), "");
 
 		DEF_INSTANCE_IN(PointSet<TDataType>, PointSet, "");
 	};

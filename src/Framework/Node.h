@@ -45,6 +45,8 @@ namespace dyno
 		void setName(std::string name);
 		std::string getName();
 
+		virtual std::string getNodeType();
+
 		bool isControllable();
 
 		void setControllable(bool con);
@@ -71,6 +73,7 @@ namespace dyno
 		// 	Iterator end();
 
 		void setSceneGraph(SceneGraph* scn);
+		SceneGraph* getSceneGraph();
 
 		/**
 		 * @brief Add a ancestor

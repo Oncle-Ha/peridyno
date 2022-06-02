@@ -2,13 +2,12 @@
 
 #include <SceneGraph.h>
 #include <Peridynamics/ElasticBody.h>
-#include <Peridynamics/ElasticityModule.h>
+
 #include <ParticleSystem/StaticBoundary.h>
 
 // Internal OpenGL Renderer
 #include <GLRenderEngine.h>
 #include <GLPointVisualModule.h>
-#include <GLSurfaceVisualModule.h>
 
 using namespace dyno;
 
@@ -22,19 +21,15 @@ int main()
 	auto bunny = scn->addNode(std::make_shared<ElasticBody<DataType3f>>());
 	bunny->connect(root->importParticleSystems());
 
-	//bunny->setMass(1.0);
-	// bunny->loadParticles("../../data/bunny/bunny_points.obj");
-	// bunny->loadSurface("../../data/bunny/bunny_mesh.obj");
-	bunny->loadParticles("../../data/dolphin/Dolphin_points.obj");
-	bunny->loadSurface("../../data/dolphin/Dolphin_surface.obj");	
-	bunny->scale(0.2f);
-	bunny->translate(Vec3f(0.5f, 0.05f, 0.5f));
+	bunny->loadParticles(getAssetPath() + "bunny/bunny_points.obj");
+	bunny->scale(1.0f);
+	bunny->translate(Vec3f(0.5f, 0.1f, 0.5f));
 	bunny->setVisible(true);
 
 	auto pointRenderer = std::make_shared<GLPointVisualModule>();
 	pointRenderer->setColor(Vec3f(1, 0.2, 1));
 	pointRenderer->setColorMapMode(GLPointVisualModule::PER_OBJECT_SHADER);
-	bunny->currentTopology()->connect(pointRenderer->inPointSet());
+	bunny->stateTopology()->connect(pointRenderer->inPointSet());
 	bunny->stateVelocity()->connect(pointRenderer->inColor());
 	bunny->graphicsPipeline()->pushModule(pointRenderer);
 

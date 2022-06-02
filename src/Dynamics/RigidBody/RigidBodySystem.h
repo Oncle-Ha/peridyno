@@ -1,7 +1,8 @@
 #pragma once
 #include "Node.h"
 #include "RigidBodyShared.h"
-
+#include <vector>
+#include <iostream>
 namespace dyno
 {
 	/*!
@@ -96,5 +97,28 @@ namespace dyno
 		DArray<SphereInfo> mDeviceSpheres;
 		DArray<BoxInfo> mDeviceBoxes;
 		DArray<TetInfo> mDeviceTets;
+
+	public:
+		int m_numOfSamples;
+		DArray2D<Vec3f> m_deviceSamples;
+		DArray2D<Vec3f> m_deviceNormals;
+
+		std::vector<Vec3f> samples;
+		std::vector<Vec3f> normals;
+
+		int getSamplingPointSize() { return m_numOfSamples; }
+
+		DArray2D<Vec3f> getSamples() { return m_deviceSamples; }
+		DArray2D<Vec3f> getNormals() { return m_deviceNormals; }
+
+		void updateVelocityAngule(Vec3f force, Vec3f torque, float dt);
+		void advect(float dt);
+		//float m_damping = 0.9f;
+
+		float m_yaw;
+		float m_pitch;
+		float m_roll;
+		float m_recoverSpeed;
+		void getEulerAngle(float& yaw, float& pitch, float& roll);
 	};
 }

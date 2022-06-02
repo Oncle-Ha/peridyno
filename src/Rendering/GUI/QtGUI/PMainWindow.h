@@ -74,6 +74,7 @@ namespace dyno
 	class PAnimationWidget;
 	class PModuleListWidget;
 	class PModuleEditor;
+	class PMainToolBar;
 
 	class RenderEngine;
 	class ImWidget;
@@ -107,9 +108,11 @@ namespace dyno
 		void showHelp();
 		void showAbout();
 
-		void showNodeEditor();
+		void showModuleEditor();
 
 		void showMessage();
+
+		void addNodeByName(std::string name);
 
 	private:
 		void setCentralView();
@@ -135,10 +138,16 @@ namespace dyno
 		
 		PPropertyWidget*		m_propertyWidget;
 		PAnimationWidget*		m_animationWidget;
+
+		PMainToolBar*			mToolBar = nullptr;
 // 
 // 		PModuleFlowWidget*		m_moduleFlowView;
 // 		PModuleListWidget*		m_moduleListWidget;
 // 		PSceneGraphWidget*		m_scenegraphWidget;
+
+
+	public slots:
+		void showAboutMsg();
 	};
 
 }

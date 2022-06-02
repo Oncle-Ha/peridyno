@@ -2,6 +2,10 @@
 #define PANIMATIONWIDGET_H
 
 #include <QWidget>
+#include <QMouseEvent>
+#include <QSlider>
+#include <QLabel>
+#include "PAnimationQSlider.h"
 
 QT_FORWARD_DECLARE_CLASS(QSpinBox)
 QT_FORWARD_DECLARE_CLASS(QScrollBar)
@@ -27,18 +31,24 @@ namespace dyno
 
 		void simulationFinished();
 
-
+		void updateSlider();
 
 	public:
 		QPushButton*	m_startSim;
 		QPushButton*	m_resetSim;
 
-		QSpinBox*	m_start_spinbox;
-		QSpinBox*	m_end_spinbox;
+		QSpinBox* m_current_frame_spinbox;
 
 		QScrollBar*	m_sim_scrollbar;
 
 		bool m_sim_started = false;
+		
+		PAnimationQSlider *m_slider;
+
+	private:
+		int totalFrame;
+		static const int labelSize = 6;
+		QLabel* label[labelSize];
 	};
 }
 

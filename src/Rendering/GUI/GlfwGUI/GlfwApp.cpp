@@ -219,7 +219,7 @@ namespace dyno
 			renderEngine()->renderParams()->viewport.h = height;
 
 			renderEngine()->draw(activeScene.get());
-
+		
 			if(mShowImWindow)
 				mImWindow.draw(renderEngine().get(), activeScene.get());
 // 			// Draw widgets
@@ -298,6 +298,16 @@ namespace dyno
 		return saveScreen(file_name);
 	}
 
+
+	void GlfwApp::turnOnVSync()
+	{
+		glfwSwapInterval(1);
+	}
+
+	void GlfwApp::turnOffVSync()
+	{
+		glfwSwapInterval(0);
+	}
 
 	void GlfwApp::toggleAnimation()
 	{

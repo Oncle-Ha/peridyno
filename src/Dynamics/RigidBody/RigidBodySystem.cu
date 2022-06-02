@@ -3,7 +3,7 @@
 #include "Topology/Primitive3D.h"
 #include "Collision/NeighborElementQuery.h"
 #include "Collision/CollistionDetectionBoundingBox.h"
-
+#include <cuda_runtime.h>
 #include "IterativeConstraintSolver.h"
 
 //Module headers
@@ -21,15 +21,15 @@ namespace dyno
 		: Node(name)
 	{
 		auto defaultTopo = std::make_shared<DiscreteElements<TDataType>>();
-		this->currentTopology()->setDataPtr(std::make_shared<DiscreteElements<TDataType>>());
+		this->stateTopology()->setDataPtr(std::make_shared<DiscreteElements<TDataType>>());
 
 		auto elementQuery = std::make_shared<NeighborElementQuery<TDataType>>();
-		this->currentTopology()->connect(elementQuery->inDiscreteElements());
+		this->stateTopology()->connect(elementQuery->inDiscreteElements());
 		this->stateCollisionMask()->connect(elementQuery->inCollisionMask());
 		this->animationPipeline()->pushModule(elementQuery);
 
 		auto cdBV = std::make_shared<CollistionDetectionBoundingBox<TDataType>>();
-		this->currentTopology()->connect(cdBV->inDiscreteElements());
+		this->stateTopology()->connect(cdBV->inDiscreteElements());
 		this->animationPipeline()->pushModule(cdBV);
 
 		auto merge = std::make_shared<ContactsUnion<TDataType>>();
@@ -213,7 +213,7 @@ namespace dyno
 	template<typename TDataType>
 	void RigidBodySystem<TDataType>::resetStates()
 	{
-		auto topo = TypeInfo::cast<DiscreteElements<DataType3f>>(this->currentTopology()->getDataPtr());
+		auto topo = TypeInfo::cast<DiscreteElements<DataType3f>>(this->stateTopology()->getDataPtr());
 
 		mDeviceBoxes.assign(mHostBoxes);
 		mDeviceSpheres.assign(mHostSpheres);
@@ -273,6 +273,13 @@ namespace dyno
 
 		this->stateInitialInertia()->setElementCount(sizeOfRigids);
 		this->stateInitialInertia()->getDataPtr()->assign(this->stateInertia()->getData());
+
+
+
+		m_yaw = 0.0f;
+		m_pitch = 0.0f;
+		m_roll = 0.0f;
+		m_recoverSpeed = 0.3f;
 	}
 	
 	template <typename Coord>
@@ -327,7 +334,7 @@ namespace dyno
 	template<typename TDataType>
 	void RigidBodySystem<TDataType>::updateTopology()
 	{
-		auto discreteSet = TypeInfo::cast<DiscreteElements<DataType3f>>(this->currentTopology()->getDataPtr());
+		auto discreteSet = TypeInfo::cast<DiscreteElements<DataType3f>>(this->stateTopology()->getDataPtr());
 
 		ElementOffset offset = discreteSet->calculateElementOffset();
 
@@ -353,6 +360,164 @@ namespace dyno
 			this->stateRotationMatrix()->getData(),
 			offset.tetIndex());
 	}
+	//myCode---------------------------------
+	
+	template<typename TQuat, typename Matrix>
+	__global__ void updateVelocityAngulessss(
+		DArray<Vec3f> m_velocity,
+		DArray<Vec3f> m_angularvelocity,
+		DArray<TQuat> quat,
+		DArray<float> m_mass,
+		DArray<Matrix> m_inertia,
+		Vec3f force,
+		Vec3f torque,
+		float dt
+		)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= m_velocity.size()) return;
+		
+		Quat<float> quat1 = Quat<float>(quat[tId].w, quat[tId].x, quat[tId].z, quat[tId].y);
 
+		Matrix m_rot = quat1.toMatrix3x3();
+
+		m_velocity[0] += dt * force / m_mass[0];// +dt * m_acceleration * m_rot * Vec3f(0.0f, 0.0f, -1.0f);
+		m_angularvelocity[0] +=dt * m_inertia[0].inverse() * m_rot.transpose() * torque;
+
+		Vec3f local_v = m_rot.transpose() * m_velocity[0];
+		local_v.x *= 0.5f;
+		float m_damping = 0.9f;
+		local_v.z *= m_damping;
+
+		m_velocity[0] = m_rot * local_v;
+		m_angularvelocity[0] *= m_damping;
+		//printf("come come le \n");
+	}
+	template<typename TDataType>
+	void RigidBodySystem<TDataType>::updateVelocityAngule(Vec3f force, Vec3f torque, float dt)
+	{
+		DArray<Vec3f> mm_velocity = stateVelocity()->getData();
+		DArray<Vec3f> mm_AngularVelocity = stateAngularVelocity()->getData();
+		DArray<TQuat> mm_rot = stateQuaternion()->getData();
+		DArray<float> mm_mass = stateMass()->getData();
+		DArray<Matrix> mm_inertia = stateInertia()->getData();
+		
+		//DEF_ARRAY_STATE(Matrix, Inertia
+		cuExecute(mm_velocity.size(),
+			updateVelocityAngulessss,
+			mm_velocity,
+			mm_AngularVelocity,
+			mm_rot,
+			mm_mass,
+			mm_inertia,
+			force, 
+			torque, 
+			dt
+			);
+	}
+
+	template<typename TQuat>
+	__global__ void m_advect(
+		DArray<Vec3f> m_velocity,
+		DArray<Vec3f> m_center,
+		DArray<Vec3f> m_AngularVelocity,
+		DArray<TQuat> m_quaternion,
+		float dt
+	)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= m_velocity.size()) return;
+
+		m_center[tId] += dt * (m_velocity[tId]);
+		m_quaternion[tId] = m_quaternion[tId] + (0.5f * dt) * Quat<float>(0, m_AngularVelocity[tId].x, m_AngularVelocity[tId].y, m_AngularVelocity[tId].z) * m_quaternion[tId];
+
+		m_quaternion[tId] = m_quaternion[tId] / m_quaternion[tId].norm();
+
+	}
+	template<typename TDataType>
+	void RigidBodySystem<TDataType>::getEulerAngle(float& yaw, float& pitch, float& roll)
+	{
+		DArray<TQuat> mm_quaternion = stateQuaternion()->getData();
+		CArray<TQuat> c_quaternion;
+		c_quaternion.resize(mm_quaternion.size());
+		c_quaternion.assign(mm_quaternion);
+
+		TQuat m_quaternion = c_quaternion[0];
+		//该系统实现y轴朝上，标准yaw, pitch, roll则是z轴朝下，因为计算之前需要先绕着x轴旋转90度。
+		Quat<float> quat = m_quaternion * Quat<float>(cos(M_PI / 4.0f), sin(M_PI / 4.0f), 0.0f, 0.0f);
+
+		double sinr_cosp = +2.0 * (quat.w * quat.x + quat.y * quat.z);
+		double cosr_cosp = +1.0 - 2.0 * (quat.x * quat.x + quat.y * quat.y);
+		//减去90度
+		roll = atan2(sinr_cosp, cosr_cosp) - M_PI / 2.0f;
+
+		// pitch (y-axis rotation)
+		double sinp = +2.0 * (quat.w * quat.y - quat.z * quat.x);
+		if (fabs(sinp) >= 1)
+			pitch = copysign(M_PI / 2, sinp); // use 90 degrees if out of range
+		else
+			pitch = asin(sinp);
+
+		// yaw (z-axis rotation)
+		double siny_cosp = +2.0 * (quat.w * quat.z + quat.x * quat.y);
+		double cosy_cosp = +1.0 - 2.0 * (quat.y * quat.y + quat.z * quat.z);
+		yaw = atan2(siny_cosp, cosy_cosp);
+	}
+
+	template<typename TQuat>
+	__global__ void m_getQuaternian(
+		DArray<TQuat> m_quaternion,
+		float yaw,
+		float pitch,
+		float roll
+	)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= m_quaternion.size()) return;
+		/*
+		double cy = cos(yaw * 0.5);
+		double sy = sin(yaw * 0.5);
+		double cp = cos(pitch * 0.5);
+		double sp = sin(pitch * 0.5);
+		double cr = cos(roll * 0.5);
+		double sr = sin(roll * 0.5);
+
+		m_quaternion[0].w = cy * cp * cr + sy * sp * sr;
+		m_quaternion[0].x = cy * cp * sr - sy * sp * cr;
+		m_quaternion[0].y = sy * cp * sr + cy * sp * cr;
+		m_quaternion[0].z = sy * cp * cr - cy * sp * sr;
+		*/
+		m_quaternion[tId] = Quat<float>(yaw, pitch, roll);
+
+	}
+
+	template<typename TDataType>
+	void RigidBodySystem<TDataType>::advect(float dt) {
+		DArray<Vec3f> mm_velocity = stateVelocity()->getData();
+		DArray<Vec3f> mm_center = stateCenter()->getData();
+		DArray<Vec3f> mm_AngularVelocity = stateAngularVelocity()->getData();
+		DArray<TQuat> mm_quaternion = stateQuaternion()->getData();
+		cuExecute(mm_velocity.size(),
+			m_advect,
+			mm_velocity,
+			mm_center,
+			mm_AngularVelocity,
+			mm_quaternion,
+			dt
+		);
+
+		getEulerAngle(m_yaw, m_pitch, m_roll);
+		m_roll *= (1.0f - m_recoverSpeed);
+		m_pitch *= (1.0f - m_recoverSpeed);
+
+		cuExecute(mm_quaternion.size(),
+			m_getQuaternian,
+			mm_quaternion,
+			m_yaw,
+			m_pitch,
+			m_roll
+		);
+	}
+	
 	DEFINE_CLASS(RigidBodySystem);
 }

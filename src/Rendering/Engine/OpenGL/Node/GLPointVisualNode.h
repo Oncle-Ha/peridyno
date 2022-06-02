@@ -15,7 +15,9 @@
  */
 
 #pragma once
-#include "ParticleSystem/ParticleSystem.h"
+#include "Node.h"
+
+#include "Topology/PointSet.h"
 
 namespace dyno
 {
@@ -30,15 +32,15 @@ namespace dyno
 		~GLPointVisualNode() override;
 
 	public:
+		std::string getNodeType() override;
+
+	protected:
 		void resetStates() override;
 
-		void preUpdateStates() override;
+		DEF_INSTANCE_IN(PointSet<TDataType>, Points, "A set of points");
 
-		DEF_NODE_PORT(ParticleSystem<TDataType>, ParticleSystem, "Particles");
-
-		DEF_INSTANCE_OUT(PointSet<TDataType>, PointSetOut, "");
-
-	public:
-		DEF_ARRAY_STATE(Coord, Vector, DeviceType::GPU, "");
+		DEF_ARRAY_IN(Coord, Vector, DeviceType::GPU, "");
 	};
+
+	IMPLEMENT_TCLASS(GLPointVisualNode, TDataType)
 };

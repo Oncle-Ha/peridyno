@@ -303,6 +303,30 @@ namespace dyno
 	}
 
 	template<typename TDataType>
+	void TriangleSet<TDataType>::updateVertexNormal()
+	{
+		if (this->outVertexNormal()->isEmpty())
+			this->outVertexNormal()->allocate();
+
+		auto& vn = this->outVertexNormal()->getData();
+
+		uint vertSize = this->m_coords.size();
+
+		if (vn.size() != vertSize) {
+			vn.resize(vertSize);
+		}
+
+		auto& vert2Tri = getVertex2Triangles();
+
+		cuExecute(vertSize,
+			TS_SetupVertexNormals,
+			vn,
+			this->m_coords,
+			m_triangles,
+			vert2Tri);
+	}
+
+	template<typename TDataType>
 	void TriangleSet<TDataType>::updateTopology()
 	{
 		if (this->outVertexNormal()->isEmpty())
@@ -324,6 +348,10 @@ namespace dyno
 			this->m_coords,
 			m_triangles,
 			vert2Tri);
+
+		this->updateEdges();
+
+		EdgeSet<TDataType>::updateTopology();
 	}
 
 	DEFINE_CLASS(TriangleSet);
