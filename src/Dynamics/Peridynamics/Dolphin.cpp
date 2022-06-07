@@ -3,10 +3,13 @@
 #include "Topology/TriangleSet.h"
 #include "Topology/PointSet.h"
 #include "Topology/MixSet.h"
+#include "Topology/NeighborPointQuery.h"
+
 #include "Mapping/PointSetToPointSet.h"
 // #include "Mapping/CapsuleToMixSet.h"
-#include "Topology/NeighborPointQuery.h"
-#include "Peridynamics/Peridynamics.h"
+
+#include "Peridynamics/Module/Peridynamics.h"
+
 #include "SharedFunc.h"
 
 
@@ -21,7 +24,7 @@ namespace dyno
     {
 
         auto mixSet = std::make_shared<MixSet<TDataType>>();
-		this->currentTopology()->setDataPtr(mixSet);
+		this->stateTopology()->setDataPtr(mixSet);
 
         this->varHorizon()->setValue(0.0085);
         // Peridynamics
@@ -31,8 +34,8 @@ namespace dyno
             this->statePosition()->connect(peri->inPosition());
             this->stateVelocity()->connect(peri->inVelocity());
             this->stateForce()->connect(peri->inForce());
-            this->currentRestShape()->connect(peri->inRestShape());
-            this->animationPipeline()->pushModule(peri);// 暂时只控制点集
+            this->stateRestShape()->connect(peri->inRestShape());
+            // this->animationPipeline()->pushModule(peri);// 暂时只控制点集
         }
 
 		//Create a node for surface mesh rendering
@@ -42,11 +45,11 @@ namespace dyno
             
             // auto triSet = m_surfaceNode->template setTopologyModule<TriangleSet<TDataType>>("surface_mesh");
             auto triSet = std::make_shared<TriangleSet<TDataType>>();
-            m_surfaceNode->currentTopology()->setDataPtr(triSet);
+            m_surfaceNode->stateTopology()->setDataPtr(triSet);
             
             //Set the topology mapping from MixSet to TriangleSet
             // auto surfaceMapping = this->template addTopologyMapping<PointSetToPointSet<TDataType>>("surface_mapping");
-            // auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
+            // auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->stateTopology()->getDataPtr());
 
             // surfaceMapping->setFrom(ptSet);
             // surfaceMapping->setTo(triSet);        
@@ -60,7 +63,7 @@ namespace dyno
             jointMapping->setFrom(&m_jointMap);
             jointMapping->setTo(mixSet);
             // jointMapping->setCapsuleRadius(0.0125);
-            jointMapping->setCapsuleRadius(0.0325);
+            jointMapping->setCapsuleRadius(this->varRadius()->getData());
             // jointMapping->setCapsuleRadius(0.055);
             // jointMapping->setCapsuleRadius(0.085);
             
@@ -68,6 +71,9 @@ namespace dyno
             this->stateVelocity()->connect(jointMapping->inVelocity());
             this->stateForce()->connect(jointMapping->inForce());
             this->varTimeStep()->connect(jointMapping->inTimeStep());
+            // TODO: 修改用速度更新。
+            jointMapping->outV0()->connect(this->outV0());
+            jointMapping->outV1()->connect(this->outV1());
         }
     }
 
@@ -80,8 +86,8 @@ namespace dyno
     template<typename TDataType>
     bool Dolphin<TDataType>::scale(Real s)
     {
-        TypeInfo::cast<TriangleSet<TDataType>>(m_surfaceNode->currentTopology()->getDataPtr())->scale(s);
-        TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr())->scale(s);
+        TypeInfo::cast<TriangleSet<TDataType>>(m_surfaceNode->stateTopology()->getDataPtr())->scale(s);
+        TypeInfo::cast<MixSet<TDataType>>(this->stateTopology()->getDataPtr())->scale(s);
         m_jointMap[0]->scale(s); // Root
 
         return true;
@@ -90,8 +96,8 @@ namespace dyno
     template<typename TDataType>
     bool Dolphin<TDataType>::translate(Coord t)
     {
-        TypeInfo::cast<TriangleSet<TDataType>>(m_surfaceNode->currentTopology()->getDataPtr())->translate(t);
-        TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr())->translate(t);
+        TypeInfo::cast<TriangleSet<TDataType>>(m_surfaceNode->stateTopology()->getDataPtr())->translate(t);
+        TypeInfo::cast<MixSet<TDataType>>(this->stateTopology()->getDataPtr())->translate(t);
         m_jointMap[0]->translate(t); // Root
 
         return true;
@@ -100,8 +106,8 @@ namespace dyno
     template<typename TDataType>
     void Dolphin<TDataType>::resetStates()
     {
-        auto mixSet = TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr());
-        auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
+        auto mixSet = TypeInfo::cast<MixSet<TDataType>>(this->stateTopology()->getDataPtr());
+        auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->stateTopology()->getDataPtr());
 		if (ptSet == nullptr) return;
 
 		auto pts = ptSet->getPoints();
@@ -126,25 +132,25 @@ namespace dyno
 
 		if (!this->statePosition()->isEmpty())
 		{
-			this->currentRestShape()->allocate();
-			auto nbrPtr = this->currentRestShape()->getDataPtr();
+			this->stateRestShape()->allocate();
+			auto nbrPtr = this->stateRestShape()->getDataPtr();
 			nbrPtr->resize(nbrQuery->outNeighborIds()->getData());
             
 			constructRestShape(*nbrPtr, nbrQuery->outNeighborIds()->getData(), this->statePosition()->getData());
 
-			this->currentReferencePosition()->allocate();
-			this->currentReferencePosition()->getDataPtr()->assign(this->statePosition()->getData());
+			this->stateReferencePosition()->allocate();
+			this->stateReferencePosition()->getDataPtr()->assign(this->statePosition()->getData());
 
-			this->currentNeighborIds()->allocate();
-			this->currentNeighborIds()->getDataPtr()->assign(nbrQuery->outNeighborIds()->getData());
+			this->stateNeighborIds()->allocate();
+			this->stateNeighborIds()->getDataPtr()->assign(nbrQuery->outNeighborIds()->getData());
 		}
     }
 
     template<typename TDataType>
     void Dolphin<TDataType>::updateTopology()
     {
-        auto mixSet = TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr());
-		auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->currentTopology()->getDataPtr());
+        auto mixSet = TypeInfo::cast<MixSet<TDataType>>(this->stateTopology()->getDataPtr());
+		auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->stateTopology()->getDataPtr());
 
         auto& pts = ptSet->getPoints();
         auto& curPos = this->statePosition()->getData();
@@ -181,8 +187,8 @@ namespace dyno
     template<typename TDataType>
     void Dolphin<TDataType>::loadMixFile(std::string filename)
     {
-        TypeInfo::cast<MixSet<TDataType>>(this->currentTopology()->getDataPtr())->loadMixFile(filename);
-        TypeInfo::cast<TriangleSet<TDataType>>(m_surfaceNode->currentTopology()->getDataPtr())->loadObjFile(filename.append("_surface.obj"));
+        TypeInfo::cast<MixSet<TDataType>>(this->stateTopology()->getDataPtr())->loadMixFile(filename);
+        TypeInfo::cast<TriangleSet<TDataType>>(m_surfaceNode->stateTopology()->getDataPtr())->loadObjFile(filename.append("_surface.obj"));
     }
 
     DEFINE_CLASS(Dolphin);

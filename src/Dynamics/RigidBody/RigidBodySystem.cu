@@ -142,6 +142,50 @@ namespace dyno
 		mHostTets.push_back(b);
 	}
 
+	template<typename TDataType>
+	void RigidBodySystem<TDataType>::addCap(
+		const CapsuleInfo& cap,
+		const RigidBodyInfo& bodyDef, 
+		const Real density /*= Real(1)*/)
+	{
+		auto b = cap;
+		auto bd = bodyDef;
+
+		bd.position = b.center;
+
+		float r = b.radius;
+		float h = b.halfLength;
+		float mass_s = 0; 
+		float mass_c = 0;
+		if (bd.mass <= 0.0f) {
+			mass_s = 3 / 4.0f*M_PI*r*r*r;
+			mass_c = M_PI*r*r*h;
+			bd.mass = (mass_s + mass_c)*density;
+		}
+		float I11 = r * r;
+		float I22 = h * h / 3.0f;
+		
+		bd.inertia = 
+				0.4f * mass_s
+			* Mat3f(I11, 0, 0,
+					0, I11, 0,
+					0, 0, I11) + 
+				2 * mass_s
+			* Mat3f(I11, 0, 0,
+					0, I11, 0,
+					0, 0, 0)   +
+				mass_c
+			* Mat3f(I22, 0, 0,
+					0, I22, 0,
+					0, 0, 0.5f * I11);
+
+		bd.shapeType = ET_CAPSULE;
+		bd.angle = b.rot;
+
+		mHostRigidBodyStates.insert(mHostRigidBodyStates.begin() + mHostSpheres.size() + mHostBoxes.size() + mHostTets.size() + mHostCaps.size(), bd);
+		mHostCaps.push_back(b);
+	}
+
 	template <typename Real, typename Coord, typename Matrix, typename Quat>
 	__global__ void RB_SetupInitialStates(
 		DArray<Real> mass,
@@ -210,6 +254,28 @@ namespace dyno
 		tet3d[tId].v[3] = tetInfo[tId].v[3];
 	}
 
+	__global__ void SetupCaps(
+		DArray<Capsule3D> cap3d,
+		DArray<CapsuleInfo> capInfo)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= capInfo.size()) return;
+
+		cap3d[tId].radius = capInfo[tId].radius;
+
+		Mat3f rot = capInfo[tId].rot.toMatrix3x3();
+		Vec3f dir =  rot * Vec3f(0, 0, 1); // Z
+		cap3d[tId].segment.v0 = capInfo[tId].center - capInfo[tId].halfLength * dir;
+		cap3d[tId].segment.v1 = capInfo[tId].center + capInfo[tId].halfLength * dir;
+
+		if (tId == -1)
+		{
+			printf("dir:(%f %f %f)\n", dir[0], dir[1], dir[2]);
+			printf("3d v0:(%f %f %f)\n", cap3d[tId].segment.v0[0], cap3d[tId].segment.v0[1], cap3d[tId].segment.v0[2]);
+			printf("3d v1:(%f %f %f)\n", cap3d[tId].segment.v1[0], cap3d[tId].segment.v1[1], cap3d[tId].segment.v1[2]);
+		}
+	}
+
 	template<typename TDataType>
 	void RigidBodySystem<TDataType>::resetStates()
 	{
@@ -218,14 +284,17 @@ namespace dyno
 		mDeviceBoxes.assign(mHostBoxes);
 		mDeviceSpheres.assign(mHostSpheres);
 		mDeviceTets.assign(mHostTets);
+		mDeviceCaps.assign(mHostCaps);
 
 		auto& boxes = topo->getBoxes();
 		auto& spheres = topo->getSpheres();
 		auto& tets = topo->getTets();
+		auto& caps = topo->getCaps();
 
 		boxes.resize(mDeviceBoxes.size());
 		spheres.resize(mDeviceSpheres.size());
 		tets.resize(mDeviceTets.size());
+		caps.resize(mDeviceCaps.size());
 
 		//Setup the topology
 		cuExecute(mDeviceBoxes.size(),
@@ -242,6 +311,11 @@ namespace dyno
 			SetupTets,
 			tets,
 			mDeviceTets);
+
+		cuExecute(mDeviceCaps.size(),
+			SetupCaps,
+			caps,
+			mDeviceCaps);
 
 		mDeviceRigidBodyStates.assign(mHostRigidBodyStates);
 
@@ -331,6 +405,38 @@ namespace dyno
 		tet[pId].v[3] = rotation[pId + start_tet] * (tet_init[pId].v[3] - center_init) + pos[pId + start_tet];
 	}
 
+	template <typename Coord, typename Matrix>
+	__global__ void UpdateCaps(
+		DArray<Capsule3D> cap,
+		DArray<CapsuleInfo> cap_init,
+		DArray<Coord> pos,
+		DArray<Matrix> rotation,
+		int start_cap)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= cap.size()) return;
+
+		Vec3f center = pos[pId + start_cap];
+		// Vec3f originD = cap[pId].segment.direction().normalize(); // +-?
+		Vec3f dir = rotation[pId + start_cap] * Vec3f(0, 0, 1);//Z 
+		cap[pId].segment.v0 = center - dir * cap_init[pId].halfLength;
+		cap[pId].segment.v1 = center + dir * cap_init[pId].halfLength;
+	}	
+
+	template <typename Coord>
+	__global__ void UpdateCapsByAnimation(
+		DArray<Capsule3D> cap,
+		DArray<Coord> v0,
+		DArray<Coord> v1)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= cap.size()) return;
+
+		cap[pId].segment.v0 = v0[pId];
+		cap[pId].segment.v1 = v1[pId];
+	}	
+
+
 	template<typename TDataType>
 	void RigidBodySystem<TDataType>::updateTopology()
 	{
@@ -359,6 +465,23 @@ namespace dyno
 			this->stateCenter()->getData(),
 			this->stateRotationMatrix()->getData(),
 			offset.tetIndex());
+
+		/*
+		cuExecute(mDeviceCaps.size(),
+			UpdateCaps,
+			discreteSet->getCaps(),
+			mDeviceCaps,
+			this->stateCenter()->getData(),
+			this->stateRotationMatrix()->getData(),
+			offset.capsuleIndex());
+			*/
+
+		// TODO: 修改用速度更新。
+		cuExecute(mDeviceCaps.size(),
+			UpdateCapsByAnimation,
+			discreteSet->getCaps(),
+			this->inV0()->getData(),
+			this->inV1()->getData());
 	}
 	//myCode---------------------------------
 	

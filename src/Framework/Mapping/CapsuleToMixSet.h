@@ -55,6 +55,10 @@ namespace dyno
 		 */
 		DEF_ARRAY_IN(Coord, Force, DeviceType::GPU, "");
 
+		// TODO: 修改用速度更新。
+		DEF_ARRAY_OUT(Coord, V0, DeviceType::GPU, "");
+		DEF_ARRAY_OUT(Coord, V1, DeviceType::GPU, "");
+
 		DEF_VAR_IN(Real, TimeStep, "");
 		
 	protected:

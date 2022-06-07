@@ -44,6 +44,11 @@ namespace dyno
 	template<typename TDataType>
 	bool CapsuleToMixSet<TDataType>::initializeImpl()
 	{
+		// initialize
+		if (this->outV0()->isEmpty())
+			this->outV0()->allocate();
+		if (this->outV1()->isEmpty())
+			this->outV1()->allocate();
 		match();
 		return true;
 	}
@@ -529,6 +534,7 @@ namespace dyno
 	void CapsuleToMixSet<TDataType>::animByVir()
 	{
 		int numPair = m_pointClusters.size();
+		float dt = this->inTimeStep()->getData();
 		DArray<Coord> p_newCoord;
 		p_newCoord.resize(numPair);
 
@@ -552,12 +558,39 @@ namespace dyno
 				p_T.push_back(joint->GlT);
 				p_R.push_back(joint->GlR);
 				p_S.push_back(joint->GlS);
+
+				joint->getGlobalCoord();
 			}
 			new_T.assign(p_T);
 			new_R.assign(p_R);
 			new_S.assign(p_S);
 			
-			// TODO 改为刚体变换
+			std::vector<Coord> p_v0;
+			std::vector<Coord> p_v1;
+			// Update Capsule Velocity AngularVelocity
+			for (auto joint : *m_from)
+			{
+				for (auto joint_son : joint->children)
+				{
+					// [v - c - u]
+					Coord v0 = joint->LastCoord;
+					Coord u0 = joint_son->LastCoord;
+					Coord c0 = (v0 + u0)/ 2.0f;
+					Coord v1 = joint->GlCoord;
+					Coord u1 = joint_son->GlCoord;
+					Coord c1 = (v1 + u1)/ 2.0f;
+					p_v0.push_back(v1);
+					p_v1.push_back(u1);
+				}
+			}
+			// TODO: 修改用速度更新。
+			auto& new_v0 = this->outV0()->getData();
+			auto& new_v1 = this->outV1()->getData();
+			new_v0.resize(p_v0.size());
+			new_v1.resize(p_v1.size());
+			new_v0.assign(p_v0);
+			new_v1.assign(p_v1);
+
 			cuExecute(numPair,
 				CM_ApplyOriginTransformPointByQuat,
 				m_pointClusters,
@@ -755,7 +788,6 @@ namespace dyno
 	void CapsuleToMixSet<TDataType>::match()
 	{
 		// 获取胶囊体接触的顶点
-		
 		m_initQuatT.resize(m_from->size());
 		m_initQuatR.resize(m_from->size());
 		m_initS.resize(m_from->size());
@@ -781,9 +813,11 @@ namespace dyno
 			Coord qm = joint->getCoordByQuat(Coord(0,0,0));
 
 			joint->GlCoord = qm;
+			//TODO joint->getGlobalCoord(); 
+
 			// std::cerr << for_cnt  <<" (M) :  " <<cm[0] << ", " << cm[1] << ", " << cm[2] << "\n";
 			//std::cerr << for_cnt  <<" (Q) :  " <<qm[0] << ", " << qm[1] << ", " << qm[2] << "\n";
-			std::cerr << for_cnt  <<" :  " <<joint->GlCoord[0] << ", " << joint->GlCoord[1] << ", " << joint->GlCoord[2] << "\n";
+			// std::cerr << for_cnt  <<" :  " <<joint->GlCoord[0] << ", " << joint->GlCoord[1] << ", " << joint->GlCoord[2] << "\n";
 		}
 		
 		//Quat
@@ -801,7 +835,7 @@ namespace dyno
 				capsule_list.push_back(JCapsule{id_joint, id_cap, 
 												joint->GlCoord, joint_son->GlCoord});
 				++id_cap;
-				//DEBUG
+				//DEBUG0
 				// float s = 1;
 				// printf("(%f,%f,%f) -> (%f,%f,%f)\n",
 				// 	joint->GlCoord[0] / s, joint->GlCoord[1] / s, joint->GlCoord[2] / s,
@@ -809,7 +843,8 @@ namespace dyno
 			}
 			++id_joint;
 		}
-		int numCluster = id_joint;
+
+		// int numCluster = id_joint;
 
  		auto nbQuery = std::make_shared<NeighborPointQueryJoint<TDataType>>();
 

@@ -55,6 +55,8 @@ namespace dyno
 		Coord getCoordByMatrix(Coord X);
 		Coord getCoordByQuat(Coord X);
         
+        void getGlobalCoord();
+
         void setAnimTranslation(std::shared_ptr<AnimationCurve<TDataType>> t) {
             AnimTranslation = t;
             AnimTranslation->setInitVal(LclTranslation);
@@ -93,6 +95,7 @@ namespace dyno
         Coord CurScaling; 
 
         Coord GlCoord;          // Global Joint's coord 
+        Coord LastCoord;
         Mat GlobalTransform;
         bool RotationActive;
 

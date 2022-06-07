@@ -38,16 +38,21 @@ namespace dyno
 
 	public:
 		DEF_VAR(Real, Horizon, 0.01, "Horizon");
+        DEF_VAR(Real, Radius, 0.0325, "Capsule Radius");
 
-		DEF_EMPTY_CURRENT_ARRAY(ReferencePosition, Coord, DeviceType::GPU, "Reference position");
+		DEF_ARRAY_STATE(Coord, ReferencePosition, DeviceType::GPU, "Reference position");
 
-		DEF_EMPTY_CURRENT_ARRAYLIST(int, NeighborIds, DeviceType::GPU, "Storing the ids for neighboring particles");
+		DEF_ARRAYLIST_STATE(int, NeighborIds, DeviceType::GPU, "Storing the ids for neighboring particles");
 
-		DEF_EMPTY_CURRENT_ARRAYLIST(NPair, RestShape, DeviceType::GPU, "Storing neighbors");
+		DEF_ARRAYLIST_STATE(NPair, RestShape, DeviceType::GPU, "Storing neighbors");
 
         //DEBUG
-        DEF_EMPTY_CURRENT_ARRAY(Color, Vec3f, DeviceType::GPU, "Color of point")
+        DEF_ARRAY_STATE(Vec3f, Color, DeviceType::GPU, "Color of point");
         // DEF_INSTANCE_STATE(PointSet<TDataType>, Points, ""); // TODO: remove this
+
+        // TODO: 修改用速度更新。
+		DEF_ARRAY_OUT(Coord, V0, DeviceType::GPU, "");
+		DEF_ARRAY_OUT(Coord, V1, DeviceType::GPU, "");
 
         std::vector<std::shared_ptr<JointTree<TDataType>>> m_jointMap;
         std::vector<std::shared_ptr<Cluster<TDataType>>> m_clusters;

@@ -62,7 +62,8 @@ namespace dyno
 		CapsuleInfo()
 		{
 			center = Vec3f(0.0f, 0.0f, 0.0f);
-			rot = Quat1f(1.0f, 0.0f, 0.0f, 0.0f);
+			// rot = Quat1f(1.0f, 0.0f, 0.0f, 0.0f);
+			rot = Quat<Real>(1.0f, 0.0f, 0.0f, 0.0f);
 			radius = 1.0f;
 			halfLength = 1.0f;
 		}

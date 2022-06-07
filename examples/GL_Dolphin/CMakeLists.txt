@@ -21,6 +21,7 @@ if(PERIDYNO_LIBRARY_PERIDYNAMICS)
         Framework 
         IO 
         Peridynamics 
+        RigidBody
 		GlfwGUI
         GLRenderEngine
 		)

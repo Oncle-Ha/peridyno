@@ -49,7 +49,7 @@ namespace dyno
 	template<typename TDataType>
 	uint DiscreteElements<TDataType>::capsuleIndex()
 	{
-		return tetIndex() + this->getCaps().size();
+		return tetIndex() + this->getTets().size();
 	}
 
 	template<typename TDataType>

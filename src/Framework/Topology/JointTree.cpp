@@ -166,6 +166,13 @@ namespace dyno
     }
 
     template<typename TDataType>
+	void JointTree<TDataType>::getGlobalCoord()
+    {
+        this->LastCoord = this->GlCoord;
+        this->GlCoord = this->getCoordByQuat(Coord(0, 0, 0));
+    }
+
+    template<typename TDataType>
     void JointTree<TDataType>::copyFrom(JointTree<TDataType> jointTree)
     {
         this->id = jointTree.id;

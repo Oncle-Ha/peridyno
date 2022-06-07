@@ -72,7 +72,6 @@ namespace dyno
 		case ET_SPHERE:
 		{
 			box = spheres[tId].aabb();
-
 			break;
 		}
 		case ET_BOX:

@@ -44,6 +44,11 @@ namespace dyno
 			const RigidBodyInfo& bodyDef,
 			const Real density = Real(1));
 
+		void addCap(
+			const CapsuleInfo& cap,
+			const RigidBodyInfo& bodyDef,
+			const Real density = Real(1));
+			
 	protected:
 		void resetStates() override;
 
@@ -85,18 +90,24 @@ namespace dyno
 
 		DEF_ARRAY_STATE(Matrix, InitialInertia, DeviceType::GPU, "Initial inertia matrix");
 
+		// TODO
+		DEF_ARRAY_IN(Coord, V0, DeviceType::GPU, "Capsule segment v0");
+		DEF_ARRAY_IN(Coord, V1, DeviceType::GPU, "Capsule segment v1");
+
 	private:
 		std::vector<RigidBodyInfo> mHostRigidBodyStates;
 
 		std::vector<SphereInfo> mHostSpheres;
 		std::vector<BoxInfo> mHostBoxes;
 		std::vector<TetInfo> mHostTets;
-
+		std::vector<CapsuleInfo> mHostCaps;
+		
 		DArray<RigidBodyInfo> mDeviceRigidBodyStates;
 
 		DArray<SphereInfo> mDeviceSpheres;
 		DArray<BoxInfo> mDeviceBoxes;
 		DArray<TetInfo> mDeviceTets;
+		DArray<CapsuleInfo> mDeviceCaps;
 
 	public:
 		int m_numOfSamples;

@@ -19,19 +19,26 @@ using namespace dyno;
 int main()
 {
 	std::shared_ptr<SceneGraph> scn = std::make_shared<SceneGraph>();
-
+	// scn->setGravity(Vec3f(0, 0, 0));
 	auto rigid = scn->addNode(std::make_shared<RigidBodySystem<DataType3f>>());
 
 	RigidBodyInfo rigidBody;
 	rigidBody.linearVelocity = Vec3f(0.0, 0, 0);
 	BoxInfo box;
-	box.center = Vec3f(0.5, 0.1, 0.5);
-	box.halfLength = Vec3f(0.1, 0.1, 0.1);
-	rigid->addBox(box, rigidBody);
+	// box.center = Vec3f(0.5, 0.1, 0.5);
+	// box.halfLength = Vec3f(0.1, 0.1, 0.1);
+	// rigid->addBox(box, rigidBody);
 
 	box.center = Vec3f(0.5, 0.3, 0.59);
 	box.halfLength = Vec3f(0.1, 0.1, 0.1);
-	rigid->addBox(box, rigidBody);
+	// rigid->addBox(box, rigidBody);
+	
+	CapsuleInfo cap;
+	cap.center = Vec3f(0.5, 0.5, 0.5);
+	cap.radius = 0.05;
+	cap.halfLength = 0.1;
+	cap.rot = Quat<Real>(3.14159265 / 4.0f, Vec3f(1.f , 0.f, 0.f));
+	rigid->addCap(cap, rigidBody);
 
 	auto mapper = std::make_shared<DiscreteElementsToTriangleSet<DataType3f>>();
 	rigid->stateTopology()->connect(mapper->inDiscreteElements());
