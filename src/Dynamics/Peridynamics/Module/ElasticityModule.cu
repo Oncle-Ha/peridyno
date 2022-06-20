@@ -281,6 +281,20 @@ namespace dyno
 		velArr[pId] += (curPos[pId] - prePos[pId]) / dt;
 	}
 
+	template <typename Real, typename Coord>
+	__global__ void K_UpdateForce(
+		DArray<Coord> forceArr,
+		DArray<Coord> prePos,
+		DArray<Coord> curPos,
+		Real dt)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= forceArr.size()) return;
+
+		forceArr[pId] += (curPos[pId] - prePos[pId]) / (dt * dt);
+		curPos[pId] = prePos[pId]; // 不更新速度和坐标
+	}
+
 	template<typename TDataType>
 	ElasticityModule<TDataType>::ElasticityModule()
 		: ConstraintModule()
@@ -376,8 +390,30 @@ namespace dyno
 			this->enforceElasticity();
 			itor++;
 		}
+		if(this->varOutForce()->getData())
+		{
+			this->updateforce();
+		}
+		else 
+		{
+			this->updateVelocity();
+		}
+	}
 
-		this->updateVelocity();
+	template<typename TDataType>
+	void ElasticityModule<TDataType>::updateforce()
+	{
+		int num = this->inPosition()->getElementCount();
+		uint pDims = cudaGridSize(num, BLOCK_SIZE);
+
+		Real dt = this->inTimeStep()->getData();
+
+		K_UpdateForce << <pDims, BLOCK_SIZE >> > (
+			this->outForce()->getData(),
+			mPosBuf,
+			this->inPosition()->getData(),
+			dt);
+		cuSynchronize();
 	}
 
 	template<typename TDataType>
@@ -439,7 +475,12 @@ namespace dyno
 	void ElasticityModule<TDataType>::preprocess()
 	{
 		int num = this->inPosition()->getElementCount();
-
+		
+		if (this->outForce()->isEmpty())
+		{
+			this->outForce()->allocate();
+			this->outForce()->getDataPtr()->resize(num);
+		}
 		if (num == mInvK.size())
 			return;
 

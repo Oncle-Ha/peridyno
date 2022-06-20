@@ -861,6 +861,10 @@ namespace dyno
 		p_pairs2.assign(nbQuery->outPJPair()->getData());
 
 		DArray<int> count;
+
+		m_pointClusters.assign(p_pairs2);
+		int numPoint = m_to->getAllPoints().size();
+		int numPair = m_pointClusters.size();
 		
 		// tet, tri
 		/*

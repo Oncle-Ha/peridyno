@@ -54,7 +54,14 @@ namespace dyno
 		DEF_ARRAY_OUT(Coord, V0, DeviceType::GPU, "");
 		DEF_ARRAY_OUT(Coord, V1, DeviceType::GPU, "");
 
-        std::vector<std::shared_ptr<JointTree<TDataType>>> m_jointMap;
+        // Capsule info
+        DEF_ARRAY_IN(JCapsule, Bone, DeviceType::GPU, "Bone Capsule");
+        DEF_ARRAY_IN(Coord, Velocity, DeviceType::GPU, "Bone Velocity");
+        DEF_ARRAY_IN(Coord, AngularVelocity, DeviceType::GPU, "Bone AngularVelocity");
+        
+        DEF_ARRAY_STATE(Coord, RigidPosition, DeviceType::GPU, "Rigid Position");
+        
+        // std::vector<std::shared_ptr<JointTree<TDataType>>> m_jointMap;
         std::vector<std::shared_ptr<Cluster<TDataType>>> m_clusters;
 
     protected:
@@ -65,5 +72,6 @@ namespace dyno
 
     private:
         std::shared_ptr<Node> m_surfaceNode;
+        DArray<JCapsule> m_bone;
 	};
 }

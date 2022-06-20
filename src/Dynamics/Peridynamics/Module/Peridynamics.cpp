@@ -33,6 +33,8 @@ namespace dyno
 		this->inVelocity()->connect(m_elasticity->inVelocity());
 		this->inRestShape()->connect(m_elasticity->inRestShape());
 		m_nbrQuery->outNeighborIds()->connect(m_elasticity->inNeighborIds());
+		m_elasticity->varOutForce()->setValue(this->varOutForce()->getData());
+		m_elasticity->outForce()->connect(this->outElasticForce());
 		this->pushModule(m_elasticity);
 	}
 

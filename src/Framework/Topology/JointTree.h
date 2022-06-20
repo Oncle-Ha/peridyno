@@ -14,7 +14,7 @@ namespace dyno
         typedef typename DataType3f::Coord Coord;
         int id_joint;
         int id_cap;
-        Coord v0,v1;
+        Coord v0, v1;
 
         DYN_FUNC JCapsule(){};
         DYN_FUNC JCapsule(int id1, int id2, Coord a0, Coord a1): 
@@ -104,6 +104,5 @@ namespace dyno
         Real GlS;
         std::vector<std::shared_ptr<JointTree>> children;
         std::shared_ptr<JointTree> parent;
-		
     };
 }

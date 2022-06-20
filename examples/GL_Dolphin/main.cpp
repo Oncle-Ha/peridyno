@@ -31,6 +31,7 @@ using namespace dyno;
 // TODO: move to Topology
 ofbx::IScene* g_scene = nullptr;
 std::shared_ptr<Dolphin<DataType3f>> temp_Dolphin;
+std::vector<std::shared_ptr<JointTree<DataType3f>>> temp_JointMap;
 std::vector<DataType3f::Coord> v0;
 std::vector<DataType3f::Coord> v1;
 std::vector<Quat<float>> rot_Quat;
@@ -75,7 +76,8 @@ void getModelProperties(const ofbx::Object& object, std::shared_ptr<JointTree<Da
 	cur->CurRotation = cur->LclRotation;
 	cur->CurScaling = cur->LclScaling;
 
-	temp_Dolphin->m_jointMap.push_back(cur);
+	temp_JointMap.push_back(cur);
+	// temp_Dolphin->m_jointMap.push_back(cur);
 }
 
 void getAnimationCurve(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3f>> parent)
@@ -169,15 +171,18 @@ void getClusterProperties(const ofbx::Object& object)
 		obj_cluster->getIndices(), obj_cluster->getIndicesCount(),
 		obj_cluster->getWeights(), obj_cluster->getWeightsCount(),
 		obj_cluster->getTransformMatrix().m, obj_cluster->getTransformLinkMatrix().m);
-	int num = 0; int size = temp_Dolphin->m_jointMap.size();
+	int num = 0; 
+	// int size = temp_Dolphin->m_jointMap.size();
+	int size = temp_JointMap.size();
 	for(; num < size; ++num)
-	if(obj_cluster->getLink()->id == temp_Dolphin->m_jointMap[num]->id) break;
+		// if(obj_cluster->getLink()->id == temp_Dolphin->m_jointMap[num]->id) break;
+		if(obj_cluster->getLink()->id == temp_JointMap[num]->id) break;
 
 	assert(num != size);
 
 	temp_cluster->m_jointIndex = num;
 
-	temp_Dolphin->m_clusters.push_back(temp_cluster);
+	// temp_Dolphin->m_clusters.push_back(temp_cluster);
 }
 
 void getCluster(const ofbx::Object& object)
@@ -210,13 +215,13 @@ void getNodes(const ofbx::IScene& scene)
 
 void getCapsule()
 {
-	for (auto joint : temp_Dolphin->m_jointMap) 
+	for (auto joint : temp_JointMap) 
 	{
 		joint->getGlobalQuat();
 		joint->getGlobalCoord();
 	}
 	
-	for (auto joint : temp_Dolphin->m_jointMap)
+	for (auto joint : temp_JointMap)
 	{
 		for (auto joint_son : joint->children)
 		{
@@ -246,7 +251,6 @@ void loadFBX(const char* filepath)
 {
 	init(filepath);
 	getNodes(*g_scene);
-	
 }
 
 std::shared_ptr<SceneGraph> createScene()

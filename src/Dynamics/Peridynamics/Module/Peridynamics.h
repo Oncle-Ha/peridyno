@@ -41,6 +41,8 @@ namespace dyno
 		~Peridynamics() override {};
 
 	public:
+		DEF_VAR(bool, OutForce, false, "Whether to output force");
+		
 		DEF_VAR(Real, Horizon, 0.0085, "");
 		// DEF_VAR(Real, Horizon, 0.0285, "");
 
@@ -52,6 +54,7 @@ namespace dyno
 
 		DEF_ARRAYLIST_IN(NPair, RestShape, DeviceType::GPU, "Storing neighbors");
 
+		DEF_ARRAY_OUT(Coord, ElasticForce, DeviceType::GPU, "Elastic Force");
 	protected:
 	};
 }

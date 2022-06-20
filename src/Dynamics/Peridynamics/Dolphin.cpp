@@ -22,58 +22,82 @@ namespace dyno
     Dolphin<TDataType>::Dolphin(std::string name)
         :ParticleSystem<TDataType>(name)
     {
-
+        // Init
         auto mixSet = std::make_shared<MixSet<TDataType>>();
 		this->stateTopology()->setDataPtr(mixSet);
-
         this->varHorizon()->setValue(0.0085);
+
         // Peridynamics
+        auto peri = std::make_shared<Peridynamics<TDataType>>();
         {
-            auto peri = std::make_shared<Peridynamics<TDataType>>();
+            peri->varOutForce()->setValue(true);
             this->varTimeStep()->connect(peri->inTimeStep());
             this->statePosition()->connect(peri->inPosition());
             this->stateVelocity()->connect(peri->inVelocity());
             this->stateForce()->connect(peri->inForce());
             this->stateRestShape()->connect(peri->inRestShape());
-            // this->animationPipeline()->pushModule(peri);// 暂时只控制点集
+            this->animationPipeline()->pushModule(peri);
         }
+
+        // Generate rigid particle & constrain 
+        auto gen = std::make_shared<RigidGenPoint<TDataType>>();
+        {
+            this->varRadius()->connect(gen->inRadius());
+            this->statePosition()->connect(gen->inPosition());
+            this->inBone()->connect(gen->inCapsule());
+            this->inVelocity()->connect(gen->inVelocity());
+            this->inAngularVelocity()->connect(gen->inAngularVelocity());
+            this->animationPipeline()->pushModule(gen);
+        }
+
+        // Solver Constraint
+        auto con = std::make_shared<ConstraintSolverModule<TDataType>>();
+        {
+            this->varTimeStep()->connect(con->inTimeStep());
+            this->statePosition()->connect(con->inPosition());
+            gen->outPosition()->connect(con->inRigidPosition());
+            gen->outCapsuleId()->connect(con->inCpasuleId());
+            gen->outConstraintRR()->connect(con->inConstraintRR());
+            gen->outConstraintRE()->connect(con->inConstraintRE());
+            peri->outElasticForce()->connect(con->inElasticForce());
+            this->animationPipeline()->pushModule(con);
+        }
+
+
+        //TODO: Rigid System
 
 		//Create a node for surface mesh rendering
         {
-            // m_surfaceNode = this->template createAncestor<Node>("Mesh");
             m_surfaceNode = std::make_shared<Node>("Mesh");
             
-            // auto triSet = m_surfaceNode->template setTopologyModule<TriangleSet<TDataType>>("surface_mesh");
             auto triSet = std::make_shared<TriangleSet<TDataType>>();
             m_surfaceNode->stateTopology()->setDataPtr(triSet);
             
             //Set the topology mapping from MixSet to TriangleSet
-            // auto surfaceMapping = this->template addTopologyMapping<PointSetToPointSet<TDataType>>("surface_mapping");
-            // auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->stateTopology()->getDataPtr());
+            auto surfaceMapping = this->template addTopologyMapping<PointSetToPointSet<TDataType>>("surface_mapping");
+            auto ptSet = TypeInfo::cast<PointSet<TDataType>>(this->stateTopology()->getDataPtr());
 
-            // surfaceMapping->setFrom(ptSet);
-            // surfaceMapping->setTo(triSet);        
+            surfaceMapping->setFrom(ptSet);
+            surfaceMapping->setTo(triSet);        
         }
 
         // Set the Topology mapping from Capsule(JointTree) to MixSet 
         // 1.Module.update()
         // 2.Mapping.apply()
         {
-            auto jointMapping = this->template addTopologyMapping<CapsuleToMixSet<TDataType>>("joint_mapping");
-            jointMapping->setFrom(&m_jointMap);
-            jointMapping->setTo(mixSet);
-            // jointMapping->setCapsuleRadius(0.0125);
-            jointMapping->setCapsuleRadius(this->varRadius()->getData());
-            // jointMapping->setCapsuleRadius(0.055);
-            // jointMapping->setCapsuleRadius(0.085);
+            auto capsuleMapping = this->template addTopologyMapping<CapsuleToMixSet<TDataType>>("joint_mapping");
+            auto& jointMap = this->stateJointMap()->getDataPtr();
+
+            capsuleMapping->setFrom(jointMap);
+            capsuleMapping->setTo(mixSet);
+            capsuleMapping->setCapsuleRadius(this->varRadius()->getData());
             
-            // this->currentColor()->connect(jointMapping->outColor());
-            this->stateVelocity()->connect(jointMapping->inVelocity());
-            this->stateForce()->connect(jointMapping->inForce());
-            this->varTimeStep()->connect(jointMapping->inTimeStep());
+            this->stateVelocity()->connect(capsuleMapping->inVelocity());
+            this->stateForce()->connect(capsuleMapping->inForce());
+            this->varTimeStep()->connect(capsuleMapping->inTimeStep());
             // TODO: 修改用速度更新。
-            jointMapping->outV0()->connect(this->outV0());
-            jointMapping->outV1()->connect(this->outV1());
+            capsuleMapping->outV0()->connect(this->outV0());
+            capsuleMapping->outV1()->connect(this->outV1());
         }
     }
 
@@ -88,7 +112,8 @@ namespace dyno
     {
         TypeInfo::cast<TriangleSet<TDataType>>(m_surfaceNode->stateTopology()->getDataPtr())->scale(s);
         TypeInfo::cast<MixSet<TDataType>>(this->stateTopology()->getDataPtr())->scale(s);
-        m_jointMap[0]->scale(s); // Root
+        // TODO
+        // this->stateJointMap()->getData()[0]->scale(s); // Root
 
         return true;
     }
@@ -98,7 +123,8 @@ namespace dyno
     {
         TypeInfo::cast<TriangleSet<TDataType>>(m_surfaceNode->stateTopology()->getDataPtr())->translate(t);
         TypeInfo::cast<MixSet<TDataType>>(this->stateTopology()->getDataPtr())->translate(t);
-        m_jointMap[0]->translate(t); // Root
+        //TODO
+        // this->stateJointMap()->getData()[0]->translate(t); // Root
 
         return true;
     }
@@ -158,12 +184,13 @@ namespace dyno
 
         //if (int (this->varElapsedTime()->getData() * 240 ) % 2 == 0)
         {
+            // TODO
             //Animation
-            for (auto joint : m_jointMap)
-            {
-                joint->applyAnimationAll(this->varElapsedTime()->getData());
-                // joint->applyAnimationAll(0.05);
-            }
+            // for (auto joint : jointMap)
+            // {
+            //     joint->applyAnimationAll(this->varElapsedTime()->getData());
+            //     // joint->applyAnimationAll(0.05);
+            // }
         
 
             auto tMappings = this->getTopologyMappingList();

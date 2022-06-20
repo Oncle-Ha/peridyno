@@ -83,7 +83,7 @@ namespace dyno
 		JointList* m_from = nullptr;
 		// std::shared_ptr<JointTree<TDataType>> m_from = nullptr;
 		std::shared_ptr<MixSet<TDataType>> m_to = nullptr;
-		DArray<Coord> m_virtualCoord; // 虚拟点坐标
+		DArray<Coord> m_virtualCoord; // 虚拟点坐标（局部坐标）
 	
 		std::vector<Mat> m_initInvTransform; // X2 = M2 M1^-1 X1
 		DArray<Quat<Real>> m_initQuatT;			

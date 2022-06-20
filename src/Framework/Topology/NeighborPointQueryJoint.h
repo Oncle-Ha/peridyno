@@ -13,8 +13,9 @@ namespace dyno
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
 		typedef typename TopologyModule::Pair2 Pair2;
+		typedef typename TopologyModule::Pair3 Pair3;
 		
-		typedef VectorND<Real, 3> Pair3f;
+		typedef VectorND<Real, 4> Pair4f;
 
 
 		NeighborPointQueryJoint();
@@ -50,8 +51,8 @@ namespace dyno
 		DEF_ARRAY_IN(JCapsule, Capsule, DeviceType::GPU, "A set of Capsules from JointTree.");
 		
 		/**
-		 * @brief <Joint, Point near Joint>
+		 * @brief <Joint, Point near Joint, Capsule>
 		 */
-		DEF_ARRAY_OUT(Pair2, PJPair, DeviceType::GPU, "Return <Joint, Point near Joint>.");
+		DEF_ARRAY_OUT(Pair3, PJPair, DeviceType::GPU, "Return <Joint, Point near Joint, Capsule>.");
 	};
 }

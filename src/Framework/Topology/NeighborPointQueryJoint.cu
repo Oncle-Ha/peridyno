@@ -187,13 +187,13 @@ namespace dyno
 
 	// max_cap {O(Gird*Point)} TODO更新同Count一样
 	// 寻找关节所延伸胶囊体控制的顶点
-	template<typename Coord, typename JCapsule, typename TDataType, typename Pair3f>
+	template<typename Coord, typename JCapsule, typename TDataType, typename Pair4f>
 	__global__ void K_ComputeNeighbor(
 		DArray<Coord> position, 
 		GridHash<TDataType> hash, 
 		Real h,
 		DArray<JCapsule> caps,
-		DArray<Pair3f> capPairs,
+		DArray<Pair4f> capPairs,
 		DArray<int> count)  // cap:[<>..]
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -266,7 +266,7 @@ namespace dyno
 						{
 							// PT_f("MIN", min_d, pId);
 							// printf("<id:%d dis:%f joint:%d>  pId:%d\n", nbId, min_d, cap.id_joint, pId);
-							capPairs[cnt + start] = (Pair3f(nbId, -min_d, cap.id_joint));
+							capPairs[cnt + start] = (Pair4f(nbId, -min_d, cap.id_joint, cap.id_cap));
 							// PT_d("index", cnt + start, pId);
 							cnt++;
 						}
@@ -316,9 +316,9 @@ namespace dyno
 
 	// max_cap 
 	// 统计顶点数
-	template<typename Pair3f>
+	template<typename Pair4f>
 	__global__ void K_CountPoint(
-		DArray<Pair3f> capPairs,
+		DArray<Pair4f> capPairs,
 		DArray<int> count)
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -334,18 +334,18 @@ namespace dyno
 	}
 
 	// max_point
-	// set out<顶点, 关节>
-	template<typename Pair3f, typename Pair2>
+	// set out<关节, 顶点, 胶囊体>
+	template<typename Pair4f, typename Pair3>
 	__global__ void K_SetOutPair(
-		DArray<Pair3f> capPairs,
+		DArray<Pair4f> capPairs,
 		DArray<int> count,
-		DArray<Pair2> outPairs)
+		DArray<Pair3> outPairs)
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= capPairs.size()) return;
 		if( pId == capPairs.size() - 1 || int(capPairs[pId][0]) != int(capPairs[pId + 1][0]))
 		{
-			outPairs[count[pId]] = Pair2(capPairs[pId][2], capPairs[pId][0]);
+			outPairs[count[pId]] = Pair3(capPairs[pId][2], capPairs[pId][0], capPairs[pId][3]);
 			// printf("<joint:%d, point:%d>\n", outPairs[count[pId]][0], outPairs[count[pId]][1]);
 		}
 			
@@ -395,7 +395,7 @@ namespace dyno
 		int numPair = m_reduce.accumulate(count.begin(), count.size());
 		m_scan.exclusive(count, true);
 
-		DArray<Pair3f>capJointPairs;
+		DArray<Pair4f>capJointPairs;
 		capJointPairs.resize(numPair);
 		cuExecute(numCp,
 			K_ComputeNeighbor,

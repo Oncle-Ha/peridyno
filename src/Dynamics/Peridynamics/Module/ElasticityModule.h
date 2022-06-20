@@ -54,6 +54,7 @@ namespace dyno {
 
 		void updateVelocity();
 		void computeInverseK();
+		void updateforce();
 
 	public:
 		/**
@@ -70,18 +71,23 @@ namespace dyno {
 		DEF_ARRAY_IN(Coord, Position, DeviceType::GPU, "Particle position");
 
 		/**
-			* @brief Particle velocity
-			*/
+		* @brief Particle velocity
+		*/
 		DEF_ARRAY_IN(Coord, Velocity, DeviceType::GPU, "Particle velocity");
 
 		/**
+		* @brief Particle elastic force
+		*/
+		DEF_ARRAY_OUT(Coord, Force, DeviceType::GPU, "Force");
+
+		/**
 		 * @brief Neighboring particles
-		 * 
 		 */
 		DEF_ARRAYLIST_IN(int, NeighborIds, DeviceType::GPU, "Neighboring particles' ids");
 
 		DEF_ARRAYLIST_IN(NPair, RestShape, DeviceType::GPU, "Reference shape");
 
+		
 	public:
 		/**
 		 * @brief Lame parameters
@@ -96,6 +102,8 @@ namespace dyno {
 
 		DEF_VAR(uint, IterationNumber, 10, "Iteration number");
 
+		DEF_VAR(bool, OutForce, false, "Whether to output force");
+		
 	protected:
 		DArray<Real> mBulkStiffness; //  where to input? see: EM_InitBulkStiffness
 		DArray<Real> mWeights;
