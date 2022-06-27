@@ -9,6 +9,7 @@
 // #include "Mapping/CapsuleToMixSet.h"
 
 #include "Peridynamics/Module/Peridynamics.h"
+#include "Peridynamics/Module/ConstraintSolverModule.h"
 
 #include "SharedFunc.h"
 
@@ -44,9 +45,10 @@ namespace dyno
         {
             this->varRadius()->connect(gen->inRadius());
             this->statePosition()->connect(gen->inPosition());
+            this->stateRigidPosition()->connect(gen->inRigidPosition());
             this->inBone()->connect(gen->inCapsule());
-            this->inVelocity()->connect(gen->inVelocity());
-            this->inAngularVelocity()->connect(gen->inAngularVelocity());
+            this->inRotate()->connect(gen->inRotate());
+            this->inTranslate()->connect(gen->inTranslate());
             this->animationPipeline()->pushModule(gen);
         }
 
@@ -55,8 +57,9 @@ namespace dyno
         {
             this->varTimeStep()->connect(con->inTimeStep());
             this->statePosition()->connect(con->inPosition());
-            gen->outPosition()->connect(con->inRigidPosition());
-            gen->outCapsuleId()->connect(con->inCpasuleId());
+            this->stateVelocity()->connect(con->inVelocity());
+            this->stateRigidPosition()->connect(con->inRigidPosition());
+            gen->outCapsuleId()->connect(con->inCapsuleId());
             gen->outConstraintRR()->connect(con->inConstraintRR());
             gen->outConstraintRE()->connect(con->inConstraintRE());
             peri->outElasticForce()->connect(con->inElasticForce());
@@ -84,6 +87,7 @@ namespace dyno
         // Set the Topology mapping from Capsule(JointTree) to MixSet 
         // 1.Module.update()
         // 2.Mapping.apply()
+        /*
         {
             auto capsuleMapping = this->template addTopologyMapping<CapsuleToMixSet<TDataType>>("joint_mapping");
             auto& jointMap = this->stateJointMap()->getDataPtr();
@@ -98,7 +102,7 @@ namespace dyno
             // TODO: 修改用速度更新。
             capsuleMapping->outV0()->connect(this->outV0());
             capsuleMapping->outV1()->connect(this->outV1());
-        }
+        }*/
     }
 
     template<typename TDataType>
@@ -204,9 +208,10 @@ namespace dyno
     }
     
 	template<typename TDataType>
-	std::shared_ptr<CapsuleToMixSet<TDataType>> Dolphin<TDataType>::getTopologyMapping()
+	std::shared_ptr<PointSetToPointSet<TDataType>> Dolphin<TDataType>::getTopologyMapping()
 	{
-		auto mapping = this->template getModule<CapsuleToMixSet<TDataType>>("joint_mapping");
+		// auto mapping = this->template getModule<CapsuleToMixSet<TDataType>>("joint_mapping");
+        auto mapping = this->template getModule<PointSetToPointSet<TDataType>>("surface_mapping");
 
 		return mapping;
 	}    

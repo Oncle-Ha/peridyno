@@ -395,6 +395,8 @@ namespace dyno
 		int numPair = m_reduce.accumulate(count.begin(), count.size());
 		m_scan.exclusive(count, true);
 
+		//FixMe: numPair = 0?
+
 		DArray<Pair4f>capJointPairs;
 		capJointPairs.resize(numPair);
 		cuExecute(numCp,

@@ -1,3 +1,18 @@
+/**
+ * Copyright 2022 Xukun Luo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #pragma once
 #include "Module/ComputeModule.h"
 #include "JointTree.h"
@@ -26,15 +41,21 @@ namespace dyno
 		
 		void compute() override;
         
+		void genRigidPoint();
         
     protected:
         bool initializeImpl() override;
 
 	private:
+		// <CapsuleID, JointID, 顶点Id>
         DArray<Pair3> m_pointClusters;
+		DArray<Quat<Real>> m_initQuatT;			
+		DArray<Quat<Real>> m_initQuatR;
+		
 		Reduction<int> m_reduce;
 		Scan m_scan;
 
+		int m_numRigidPoints;
 	public:
 		/**
 		* @brief Capsules radius
@@ -56,12 +77,14 @@ namespace dyno
 		 */
 		DEF_ARRAY_IN(JCapsule, Capsule, DeviceType::GPU, "A set of Capsules from JointTree.");
 
-		DEF_ARRAY_IN(Coord, Velocity, DeviceType::GPU, "Bone Velocity");
-        DEF_ARRAY_IN(Coord, AngularVelocity, DeviceType::GPU, "Bone AngularVelocity");
-		/**
-		 * @brief Virtual Point Set
-		 */
-		DEF_ARRAY_OUT(Coord, Position, DeviceType::GPU, "Return Virtual Point Set.");
+		DEF_ARRAY_IN(Quat<Real>, Rotate, DeviceType::GPU, "Bone Rotate");
+		DEF_ARRAY_IN(Quat<Real>, Translate, DeviceType::GPU, "Bone Translate");
+
+		// DEF_ARRAY_IN(Coord, Velocity, DeviceType::GPU, "Bone Velocity");
+        // DEF_ARRAY_IN(Coord, AngularVelocity, DeviceType::GPU, "Bone AngularVelocity");
+
+		DEF_ARRAY_IN(Coord, RigidPosition, DeviceType::GPU, "Virtual Point Set.");
+
 
         /**
 		 * @brief Capsule Id
@@ -69,7 +92,7 @@ namespace dyno
 		DEF_ARRAY_OUT(int, CapsuleId, DeviceType::GPU, "Rigid Particle's Bone Id");
 
 		/**
-		 * @brief Constraint Between rigid particle and elastic particle.
+		 * @brief Constraint Between rigid particle and elastic particle. <elastic particle ID, Joint ID>
 		 */
 		DEF_ARRAY_OUT(Pair2, ConstraintRE, DeviceType::GPU, "Constraint: rigid & elastic");
 

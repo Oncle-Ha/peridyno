@@ -58,8 +58,8 @@ namespace dyno
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= to.size()) return;
 
-		if (pId == 175 || pId == 174 || pId == 174 || pId == 1551 )
-			printf("Before %d : %f %f %f\n", pId, to[pId][0], to[pId][1], to[pId][2]);
+		// if (pId == 175 || pId == 174 || pId == 174 || pId == 1551 )
+		// 	printf("Before %d : %f %f %f\n", pId, to[pId][0], to[pId][1], to[pId][2]);
 		Real totalWeight = 0;
 		Coord to_i = to[pId];
 		Coord initTo_i = initTo[pId];
@@ -77,8 +77,8 @@ namespace dyno
 		for (int ne = 0; ne < nbSize; ne++)
 		{
 			int j = list_i[ne];
-			if (pId == 174)
-				printf("%d : %f %f %f\n", j ,from[j][0], from[j][1], from[j][2]);
+			// if (pId == 174)
+			// 	printf("%d : %f %f %f\n", j ,from[j][0], from[j][1], from[j][2]);
 			
 			// TODO: norm -> abs?
 			//1
@@ -101,8 +101,8 @@ namespace dyno
 
 				total_weight1 += weight1;
 
-				if (pId == 174)
-					printf("w1: %f\n", weight1);
+				// if (pId == 174)
+				// 	printf("w1: %f\n", weight1);
 			}
 
 			if (r2 > EPSILON)
@@ -117,8 +117,8 @@ namespace dyno
 				deform_i(2, 0) += p[2] * q2[0]; deform_i(2, 1) += p[2] * q2[1]; deform_i(2, 2) += p[2] * q2[2];
 				total_weight2 += weight2;
 
-				if (pId == 174)
-					printf("w2: %f\n", weight2);
+				// if (pId == 174)
+				// 	printf("w2: %f\n", weight2);
 			}
 			//
 		}
@@ -168,14 +168,14 @@ namespace dyno
 				accDisplacement_i += weight * (from[j] + r * deformed_ij);
 			}
 		}
-		if (pId == 174)
-			printf("acc: %f\n", accDisplacement_i[0]);
+		// if (pId == 174)
+		// 	printf("acc: %f\n", accDisplacement_i[0]);
 
 		accDisplacement_i = totalWeight > EPSILON ? (accDisplacement_i / totalWeight) : accDisplacement_i;
 		to[pId] = accDisplacement_i;
 
-		if (pId == 175 || pId == 173 || pId == 174 || pId == 1551 )
-			printf("After %d : %f %f %f\n", pId, to[pId][0], to[pId][1], to[pId][2]);
+		// if (pId == 175 || pId == 173 || pId == 174 || pId == 1551 )
+		// 	printf("After %d : %f %f %f\n", pId, to[pId][0], to[pId][1], to[pId][2]);
 			
 	}
 

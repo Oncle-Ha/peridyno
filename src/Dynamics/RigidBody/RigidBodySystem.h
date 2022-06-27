@@ -91,8 +91,8 @@ namespace dyno
 		DEF_ARRAY_STATE(Matrix, InitialInertia, DeviceType::GPU, "Initial inertia matrix");
 
 		// TODO
-		DEF_ARRAY_IN(Coord, V0, DeviceType::GPU, "Capsule segment v0");
-		DEF_ARRAY_IN(Coord, V1, DeviceType::GPU, "Capsule segment v1");
+		// DEF_ARRAY_IN(Coord, V0, DeviceType::GPU, "Capsule segment v0");
+		// DEF_ARRAY_IN(Coord, V1, DeviceType::GPU, "Capsule segment v1");
 
 	private:
 		std::vector<RigidBodyInfo> mHostRigidBodyStates;

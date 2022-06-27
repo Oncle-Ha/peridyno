@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Xiaowei He
+ * Copyright 2022 Xukun Luo
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 #pragma once
 #include "Module/ConstraintModule.h"
+#include "Module/TopologyModule.h"
 
 namespace dyno {
 
@@ -31,17 +32,20 @@ namespace dyno {
 		typedef typename TDataType::Real Real;
 		typedef typename TDataType::Coord Coord;
 		typedef typename TDataType::Matrix Matrix;
-		typedef TPair<TDataType> NPair;
+		typedef typename TopologyModule::Pair2 Pair2;
+        typedef typename TopologyModule::Pair3 Pair3;
 
 		ConstraintSolverModule();
 		~ConstraintSolverModule() override;
 		
 		void constrain() override;
-
+		void computeInitValue();
+		void updatePosition();
+		void updateVelocity();
 		void solveConstraint();
 
 	protected:
-		void preprocess() override;
+		bool initializeImpl() override;
 
 	public:
 		DEF_VAR_IN(Real, TimeStep, "");
@@ -50,6 +54,12 @@ namespace dyno {
 		 * @brief Particle position
 		 */
 		DEF_ARRAY_IN(Coord, Position, DeviceType::GPU, "Particle position");
+
+		/**
+		 * @brief Particle velocity
+		 */
+		DEF_ARRAY_IN(Coord, Velocity, DeviceType::GPU, "Particle Velocity");
+
 
 		/**
 		 * @brief Rigid Particle position
@@ -87,9 +97,38 @@ namespace dyno {
 
 		// DEF_VAR(Real, Lambda, 0.001, "Lame parameters: lambda");		
 
-		// DEF_VAR(uint, IterationNumber, 10, "Iteration number");
+		DEF_VAR(uint, IterationNumber, 10, "Iteration number");
 
 	protected:
+		int mN;
+		int mC;
+		int numEPos;
+		int numRPos;
+
 		// DArray<>
+
+
+		DArray<Coord> mY;
+		DArray<Coord> mX;
+		DArray<Coord> mF;
+		DArray<Coord> mV;
+
+		// DArray<Matrix> mJ;
+
+
+		DArray<Real> mInvK;
+		DArray<Real> mA;
+
+		//Jacobi Method
+		DArray<Real> mWa;
+		DArray<Real> mWb;
+		DArray<Real> mWc;
+		DArray<Real> mLambda;
+
+		DArray<Pair2> mConstraint;
+		DArray<Real> mPhi;
+		DArray<Real> mDis;
+		DArray<Real> mConstJ;
+		DArray<Real> mLen; // = 0
 	};
 }

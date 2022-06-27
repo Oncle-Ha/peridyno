@@ -5,6 +5,7 @@
 #include <Topology/MixSet.h>
 #include <Topology/JointTree.h>
 #include <Topology/Cluster.h>
+#include <Topology/SkeletonLoader.h>
 
 #include <Peridynamics/Dolphin.h>
 #include <Peridynamics/ElasticBody.h>
@@ -25,6 +26,11 @@
 
 #include <Module/CalculateNorm.h>
 #include <ColorMapping.h>
+
+
+// FIXME
+// #include <IO/..>
+
 
 using namespace dyno;
 
@@ -164,7 +170,7 @@ void getLimbNode(const ofbx::Object& object, std::shared_ptr<JointTree<DataType3
 
 // import Skin
 // For one mesh
-void getClusterProperties(const ofbx::Object& object)
+void getClusterProperties(const ofbx::Object& object)// To delete
 {
 	ofbx::Cluster* obj_cluster = (ofbx::Cluster*)&object;
 	std::shared_ptr<Cluster<DataType3f>> temp_cluster = std::make_shared<Cluster<DataType3f>>(
@@ -185,7 +191,7 @@ void getClusterProperties(const ofbx::Object& object)
 	// temp_Dolphin->m_clusters.push_back(temp_cluster);
 }
 
-void getCluster(const ofbx::Object& object)
+void getCluster(const ofbx::Object& object)// To delete
 {
 	if (object.getType() == ofbx::Object::Type::CLUSTER){
 		getClusterProperties(object);
@@ -266,6 +272,18 @@ std::shared_ptr<SceneGraph> createScene()
 	root->varNormalFriction()->setValue(0.0f);
 	// root->loadShpere(Vec3f(0.5, 0.7f, 0.5), 0.08f, 0.005f, false, true);
 
+	//skeleton Loader
+	auto skeleton = scene->addNode(std::make_shared<SkeletonLoader<DataType3f>>());
+	{
+		loadFBX("../../data/dolphin/Dolphin_Particles_SubRR.fbx");
+		skeleton->setJointMap(temp_JointMap);
+		skeleton->scale(0.2f);
+		skeleton->translate(Vec3f(0.5f, 0.1f, 0.5f));
+		// skeleton->scale(0.5f);
+		// skeleton->translate(Vec3f(0.3f, 0.2f, 0.7f));
+		getCapsule();
+	}
+
 	// set dolphin
 	auto dolphin = scene->addNode(std::make_shared<Dolphin<DataType3f>>());
 	{
@@ -274,14 +292,14 @@ std::shared_ptr<SceneGraph> createScene()
 		root->addParticleSystem(dolphin);
 
 		dolphin->loadMixFile("../../data/dolphin/Dolphin");
-		loadFBX("../../data/dolphin/Dolphin_Particles_SubRR.fbx");
+		
 		
 		// 顺序：缩放，平移
 		dolphin->scale(0.2f);
 		dolphin->translate(Vec3f(0.5f, 0.1f, 0.5f));
 		dolphin->setVisible(true);
 
-		getCapsule();
+		
 
 		//DEBUG 
 		// dolphin->loadParticles(Vec3f(-2, 0, -0.5), Vec3f(2, 4, 0.5), 0.05);
@@ -318,7 +336,7 @@ std::shared_ptr<SceneGraph> createScene()
 
 			dolphin->graphicsPipeline()->pushModule(pointRenderer);
 
-			pointRenderer->setVisible(false);
+			pointRenderer->setVisible(true);
 		}
 
 		// set surface
@@ -339,7 +357,8 @@ std::shared_ptr<SceneGraph> createScene()
 			CapsuleInfo cap;
 			
 			cap.center = (v0[i] + v1[i]) / 2.0f;
-			cap.radius = dolphin->varRadius()->getData()*0.2f;
+			// cap.radius = dolphin->varRadius()->getData()*0.2f;
+			cap.radius = dolphin->varRadius()->getData();
 			cap.halfLength = (v1[i] - v0[i]).norm() / 2.0f;
 			cap.rot = rot_Quat[i];
 			rigid->addCap(cap, rigidBody);
@@ -360,9 +379,17 @@ std::shared_ptr<SceneGraph> createScene()
 		rigid->graphicsPipeline()->pushModule(sRenderRigid);
 	}
 	
-	// 
-	dolphin->outV0()->connect(rigid->inV0());
-	dolphin->outV1()->connect(rigid->inV1());
+	// Data transport
+	{
+		// skeleton -> dolphin
+		skeleton->outBone()->connect(dolphin->inBone());
+		skeleton->outRotate()->connect(dolphin->inRotate());
+		skeleton->outTranslate()->connect(dolphin->inTranslate());
+
+		// dolphin -> rigid
+		// dolphin->outV0()->connect(rigid->inV0());
+		// dolphin->outV1()->connect(rigid->inV1());
+	}
 	return scene;
 }
 

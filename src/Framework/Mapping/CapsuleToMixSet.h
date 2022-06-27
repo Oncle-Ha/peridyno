@@ -1,3 +1,18 @@
+/**
+ * Copyright 2022 Xukun Luo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #pragma once
 #include "Module/TopologyMapping.h"
 #include "Topology/PointSet.h"
@@ -75,7 +90,7 @@ namespace dyno
 		//映射关系
 		DArray<Pair2> m_tetClusters; 
 		DArray<Pair2> m_triClusters;
-		DArray<Pair2> m_pointClusters;
+		DArray<Pair3> m_pointClusters;
 
 		// shape match
 		DArray<Coord> m_initCoord; //r_i

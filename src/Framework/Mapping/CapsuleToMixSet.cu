@@ -827,9 +827,9 @@ namespace dyno
 
 		std::vector<JCapsule>capsule_list;
 		int id_joint = 0;
+		int id_cap = 0;
 		for (auto joint : *m_from)
 		{
-			int id_cap = 0;
 			for (auto joint_son : joint->children)
 			{
 				capsule_list.push_back(JCapsule{id_joint, id_cap, 
@@ -856,13 +856,13 @@ namespace dyno
 
 		// 获取顶点所对应的几何体
 		// 返回DArray<Pair<几何体ID, JointID>> 
-		DArray<Pair2> p_pairs2;
+		DArray<Pair3> p_pairs3;
 
-		p_pairs2.assign(nbQuery->outPJPair()->getData());
+		p_pairs3.assign(nbQuery->outPJPair()->getData());
 
 		DArray<int> count;
 
-		m_pointClusters.assign(p_pairs2);
+		m_pointClusters.assign(p_pairs3);
 		int numPoint = m_to->getAllPoints().size();
 		int numPair = m_pointClusters.size();
 		
@@ -870,12 +870,12 @@ namespace dyno
 		/*
 		auto fun_body = [=](DArrayList<int>& Ver2X, DArray<Pair2>& m_Clusters) mutable 
 		{
-			int pairVerJointSize = p_pairs2.size();
+			int pairVerJointSize = p_pairs3.size();
 			count.resize(pairVerJointSize);
 
 			cuExecute(pairVerJointSize,
 				CM_CountPair3,
-				p_pairs2,
+				p_pairs3,
 				Ver2X,
 				count);
 			cuSynchronize();	
@@ -888,7 +888,7 @@ namespace dyno
 
 			cuExecute(pairVerJointSize,
 				CM_SetPair3,
-				p_pairs2,
+				p_pairs3,
 				Ver2X,
 				count,
 				p_pairs3);
@@ -923,17 +923,13 @@ namespace dyno
 			cuSynchronize();
 		};
 		
-		if (is_body && p_pairs2.size())
+		if (is_body && p_pairs3.size())
 		{
 			fun_body(m_to->getVer2Tri(), m_triClusters);
 			fun_body(m_to->getVer2Tet(), m_tetClusters);
 		}
 		else
 		*/
-
-		m_pointClusters.assign(p_pairs2);
-		int numPoint = m_to->getAllPoints().size();
-		int numPair = m_pointClusters.size();
 
 		// Set Color
 		/*
@@ -1013,7 +1009,7 @@ namespace dyno
 		}
 
 		count.clear();
-		p_pairs2.clear();
+		p_pairs3.clear();
 
 	}
 

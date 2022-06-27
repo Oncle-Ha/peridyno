@@ -466,7 +466,7 @@ namespace dyno
 			this->stateRotationMatrix()->getData(),
 			offset.tetIndex());
 
-		/*
+		
 		cuExecute(mDeviceCaps.size(),
 			UpdateCaps,
 			discreteSet->getCaps(),
@@ -474,14 +474,15 @@ namespace dyno
 			this->stateCenter()->getData(),
 			this->stateRotationMatrix()->getData(),
 			offset.capsuleIndex());
-			*/
+			
 
 		// TODO: 修改用速度更新。
-		cuExecute(mDeviceCaps.size(),
+		/*cuExecute(mDeviceCaps.size(),
 			UpdateCapsByAnimation,
 			discreteSet->getCaps(),
 			this->inV0()->getData(),
 			this->inV1()->getData());
+			*/
 	}
 	//myCode---------------------------------
 	
