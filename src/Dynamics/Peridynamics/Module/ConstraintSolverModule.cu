@@ -2,6 +2,12 @@
 #include "Node.h"
 #include "Matrix/MatrixFunc.h"
 #include "ParticleSystem/Kernel.h"
+#define CSM_BIAS 1e-5
+#define CSM_EPS 1e-6
+#define CSM_BOUND 20
+#define iszero(x, num) if (fabs(x) < CSM_EPS) printf("div zero in line %d\n", num)
+#define isover(x, num) if (fabs(x) > CSM_BOUND) printf("over bounding in line %d\n", num)
+#define Fline(num)  printf("overflow in line %d\n", num)
 
 namespace dyno
 {
@@ -71,7 +77,7 @@ namespace dyno
 		int p1 = p0 + 1;
 		int p2 = p1 + 1;
 
-		Wa[p0] = 1. / A[pId];
+		Wa[p0] = 1. / A[pId]; iszero(A[pId], 76);
 		Wa[p1] = Wa[p0];
 		Wa[p2] = Wa[p0];
 		Coord t = F[pId] + A[pId] * X[pId];
@@ -93,9 +99,9 @@ namespace dyno
 		if(pId >= con.size()) return;
 		int y1 = con[pId][0];
 		int y2 = con[pId][1];
-		Dis[pId] = (X[y1] - X[y2]).norm();
+		Dis[pId] = (X[y1] - X[y2]).norm() + CSM_BIAS;
 		Phi[pId] = Dis[pId] - Len[pId];
-		ConstJ[pId] = 1. / sqrtf(Dis[pId]);
+		ConstJ[pId] = 1. / sqrtf(Dis[pId]); iszero(Dis[pId], 101);
 	}
 
 	template <typename Coord, typename Real, typename Pair2>
@@ -117,7 +123,7 @@ namespace dyno
 		int y2 = con[pId][1];
 
 		Wa[id] = 1. / invK[pId];
-		Wb[id] = Phi[pId] - (X[y1].normSquared() + X[y2].normSquared()) / sqrtf(Dis[pId]);
+		Wb[id] = Phi[pId] - (X[y1].normSquared() + X[y2].normSquared()) / sqrtf(Dis[pId]);	iszero(Dis[pId], 123);
 	}
 	
 	template <typename Coord, typename Real, typename Pair2>
@@ -177,9 +183,14 @@ namespace dyno
 			Real t1 = Wa[p1] * (Wb[p1] - Wc[p1]);
 			Real t2 = Wa[p2] * (Wb[p2] - Wc[p2]);
 			X[pId] = Coord(t0, t1, t2);
+			// isover(t0, pId); isover(t1, 186); isover(t2, 186);
+			if (pId == 0) 
+			{
+				printf("X[%d]: (%.3f %.3f %.3f)\n", pId, t0, t1, t2);
+			}
 		}else
 		{
-			int p = pId + N * 3;
+			int p = pId + N * 2;
 			int id = pId - N;
 			Lambda[id] = Wa[p] * (Wb[p] - Wc[p]);
 		}
@@ -207,7 +218,7 @@ namespace dyno
 			CSM_CalParticleAB,
 			mWa,
 			mWb,
-			mA,
+			mAdy,
 			mF,
 			mX);
 		cuSynchronize();
@@ -263,11 +274,21 @@ namespace dyno
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if(pId >= InvK.size()) return;
 
-		InvK[pId] = 1. / k;
+		InvK[pId] = 1. / k;	iszero(k, 270);
 		con[pId] = Pair2(InitconRE[pId][0], pId + numEPos);
-		Len[pId] = (X[con[pId][0]] - X[con[pId][1]]).norm();
+		Len[pId] = (X[con[pId][0]] - X[con[pId][1]]).norm() + CSM_BIAS;
 	}
-
+	template <typename Real>
+	__global__ void CSM_SetUpDynamicA(
+		DArray<Real> A,
+		DArray<Real> Ady,
+		Real dt)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if(pId >= A.size()) return;		
+		Ady[pId] = A[pId] / (dt * dt); iszero(dt, 282);
+	}
+	
 	template <typename Real>
 	__global__ void CSM_SetUpLambda(
 		DArray<Real> Lambda)
@@ -294,14 +315,20 @@ namespace dyno
 		if(pId >= numE + numR) return;	
 		if(pId < numE)	
 		{
-			A[pId] = densityE / (dt * dt);
+			// A[pId] = densityE / (dt * dt);	iszero(dt, 301);
+			A[pId] = densityE;
 			X[pId] = posE[pId] + velE[pId] * dt;
+			if (pId > posE.size()) Fline(315);
+			if (pId > velE.size()) Fline(316);
 		}
 		else
 		{
-			A[pId] = densityR / (dt * dt);
+			// A[pId] = densityR / (dt * dt); iszero(dt, 306);
+			A[pId] = densityR;
 			X[pId] = posR[pId - numE];
+			if (pId - numE > posR.size()) Fline(323);
 		}
+		isover(X[pId][0], 327); isover(X[pId][1], 327); isover(X[pId][2], 327);
 	}
 
 	template <typename Coord, typename Real>
@@ -326,14 +353,18 @@ namespace dyno
 			F[pId] = forceE[pId];
 			X[pId] = posE[pId] + velE[pId] * dt;
 			V[pId] = velE[pId];
+			if (pId > posE.size()) Fline(347);
+			if (pId > velE.size()) Fline(347);			
 		}
 		else
 		{
 			F[pId] = Coord(0);
 			X[pId] = posR[pId - numE];
 			V[pId] = Coord(0);
+			if (pId - numE > posR.size()) Fline(357);
 		}
 		Y[pId] = X[pId];
+		isover(X[pId][0],363); isover(X[pId][1], 363); isover(X[pId][2], 363);
 	}
 
 	template <typename Coord, typename Real>
@@ -346,7 +377,7 @@ namespace dyno
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if(pId >= pos.size()) return;
 
-		vel[pId] = (cur_pos[pId] - pos[pId]) / dt;
+		vel[pId] = (cur_pos[pId] - pos[pId]) / dt;  iszero(dt, 353);
 		pos[pId] = cur_pos[pId];
 	}
 
@@ -384,12 +415,13 @@ namespace dyno
 	template<typename TDataType>
 	void ConstraintSolverModule<TDataType>::updateVelocity()
 	{
+		Real dt = this->inTimeStep()->getData();
 		cuExecute(mN,
 			CSM_UpdateParticleVel,
 			mY,
 			mX,
 			this->inVelocity()->getData(),
-			this->inTimeStep()->getData());
+			dt);
 		cuSynchronize();
 
 		// TODO: Rigid Capsule Vel
@@ -399,6 +431,15 @@ namespace dyno
 	template<typename TDataType>
 	void ConstraintSolverModule<TDataType>::computeInitValue()
 	{
+		Real dt = this->inTimeStep()->getData();
+
+		cuExecute(mN,
+			CSM_SetUpDynamicA,
+			mA,
+			mAdy,
+			dt);
+		cuSynchronize();
+
 		cuExecute(mC,
 			CSM_SetUpLambda,
 			mLambda);
@@ -416,14 +457,15 @@ namespace dyno
 			mV,
 			numEPos,
 			numRPos,
-			this->inTimeStep()->getData());
+			dt);
 		cuSynchronize();
 	}
 
 	template<typename TDataType>
 	bool ConstraintSolverModule<TDataType>::initializeImpl()
 	{
-		
+		Real dt = this->inTimeStep()->getData();	// dt = 0.0
+
 		numEPos = this->inPosition()->getElementCount();
 		numRPos = this->inRigidPosition()->getElementCount();
 		
@@ -440,6 +482,7 @@ namespace dyno
 		mF.resize(mN);
 		mV.resize(mN);
 		mA.resize(mN);
+		mAdy.resize(mN);
 
 		cuExecute(mN,
 			CSM_SetUpParticle,
@@ -450,7 +493,7 @@ namespace dyno
 			this->inRigidPosition()->getData(),
 			numEPos,
 			numRPos,
-			this->inTimeStep()->getData(),
+			dt,
 			Real(1.0),
 			Real(1.0));
 		cuSynchronize();

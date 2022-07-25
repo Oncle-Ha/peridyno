@@ -118,6 +118,7 @@ namespace dyno {
 
 		DArray<Real> mInvK;
 		DArray<Real> mA;
+		DArray<Real> mAdy;
 
 		//Jacobi Method
 		DArray<Real> mWa;
