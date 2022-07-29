@@ -111,7 +111,7 @@ namespace dyno
         //Animation
         for (auto joint : m_jointMap)
         {
-            joint->applyAnimationAll(this->varElapsedTime()->getData());
+            joint->applyAnimationAll(this->varElapsedTime()->getData() / 100);
             // joint->applyAnimationAll(0.05);
         }
         

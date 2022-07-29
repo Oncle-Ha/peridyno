@@ -275,7 +275,8 @@ std::shared_ptr<SceneGraph> createScene()
 	//skeleton Loader
 	auto skeleton = scene->addNode(std::make_shared<SkeletonLoader<DataType3f>>());
 	{
-		loadFBX("../../data/dolphin/Dolphin_Particles_SubRR.fbx");
+		// loadFBX("../../data/dolphin/Dolphin_Particles_SubRR.fbx");
+		loadFBX("../../data/dolphin/Dolphin_Particles.fbx");
 		skeleton->setJointMap(temp_JointMap);
 		skeleton->scale(0.2f);
 		skeleton->translate(Vec3f(0.5f, 0.1f, 0.5f));
@@ -327,8 +328,8 @@ std::shared_ptr<SceneGraph> createScene()
 			pointRenderer->setColorMapRange(0, 1);
 			
 			dolphin->stateTopology()->connect(pointRenderer->inPointSet());
-			colorMapper->outColor()->connect(pointRenderer->inColor());
-			// dolphin->currentColor()->connect(pointRenderer->inColor()); //DEBUG
+			// colorMapper->outColor()->connect(pointRenderer->inColor());
+			dolphin->outColor()->connect(pointRenderer->inColor()); //DEBUG
 
 			// SurfaceNode pointRenderer
 			//dolphin->getSurfaceNode()->stateTopology()->connect(pointRenderer->inPointSet());
@@ -377,6 +378,8 @@ std::shared_ptr<SceneGraph> createScene()
 		sRenderRigid->setColor(Vec3f(133 / 255.0, 105 / 255.0, 103 / 255.0));
 		mapper->outTriangleSet()->connect(sRenderRigid->inTriangleSet());
 		rigid->graphicsPipeline()->pushModule(sRenderRigid);
+
+		sRenderRigid->setVisible(false);
 	}
 	
 	// Data transport

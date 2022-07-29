@@ -63,12 +63,15 @@ namespace dyno
 		DEF_ARRAYLIST_STATE(NPair, RestShape, DeviceType::GPU, "Storing neighbors");
 
         //DEBUG
-        DEF_ARRAY_STATE(Vec3f, Color, DeviceType::GPU, "Color of point");
+        // DEF_ARRAY_STATE(Vec3f, Color, DeviceType::GPU, "Color of point");
         // DEF_INSTANCE_STATE(PointSet<TDataType>, Points, ""); // TODO: remove this
 
         // TODO: 修改用速度更新。
 		DEF_ARRAY_OUT(Coord, V0, DeviceType::GPU, "");
 		DEF_ARRAY_OUT(Coord, V1, DeviceType::GPU, "");
+
+        //  Particle Color
+		DEF_ARRAY_OUT(Vec3f, Color, DeviceType::GPU, "");
 
         // Capsule info
         DEF_ARRAY_IN(JCapsule, Bone, DeviceType::GPU, "Bone Capsule");

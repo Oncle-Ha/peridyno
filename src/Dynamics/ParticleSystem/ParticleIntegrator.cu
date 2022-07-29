@@ -166,11 +166,27 @@ namespace dyno
 	template<typename TDataType>
 	bool ParticleIntegrator<TDataType>::integrate()
 	{
+
+		// DEBUG
+		auto& ef = this->inVelocity()->getData();
+		int mN = ef.size();
+		ViewGPUData<TDataType> p_view[3];
+		p_view[0].resize(mN);
+		p_view[1].resize(mN);
+		p_view[2].resize(mN);
+		p_view[0].viewIm(ef, 0);
+		p_view[1].viewIm(ef, 1);
+		p_view[2].viewIm(ef, 2);
+
 		if (!this->inPosition()->isEmpty())
 		{
 			updateVelocity();
 			updatePosition();
 		}
+		
+		p_view[0].viewIm(ef, 0);
+		p_view[1].viewIm(ef, 1);
+		p_view[2].viewIm(ef, 2);
 
 		return true;
 	}

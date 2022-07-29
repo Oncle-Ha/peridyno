@@ -28,7 +28,7 @@ namespace dyno
 	{
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= clusters.size()) return;
-		int p = clusters[pId][2];
+		int p = clusters[pId][1];
 
         virTo[pId] = to[p];
 		capsuleId[pId] = clusters[pId][0];
@@ -42,7 +42,7 @@ namespace dyno
 		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (pId >= clusters.size()) return;
 
-		ConstraintRE[pId] = Pair2(clusters[pId][2], clusters[pId][1]);
+		ConstraintRE[pId] = Pair2(clusters[pId][1], clusters[pId][2]);
 	}
 
     template<typename Pair3>
@@ -54,6 +54,28 @@ namespace dyno
 		int p = clusters[pId][2];
 		clusters[pId][2] = clusters[pId][0];
 		clusters[pId][0] = p;
+	}
+
+    template<typename Vec3f>
+	__global__ void RGP_InitColor(
+		DArray<Vec3f> color,
+		Vec3f c)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= color.size()) return;
+		color[pId] = c;
+	}
+
+    template<typename Vec3f, typename Pair3>
+	__global__ void RGP_ConstraintColor(
+		DArray<Pair3> clusters,
+		DArray<Vec3f> color,
+		Vec3f c)
+	{
+		int pId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (pId >= clusters.size()) return;
+		int p = clusters[pId][1];
+		color[p] = c;
 	}
 
 	template<typename Coord, typename Real, template<typename Real> typename Quat>
@@ -94,6 +116,9 @@ namespace dyno
 		this->outCapsuleId()->allocate();
 		this->outConstraintRE()->allocate();
 		this->outConstraintRR()->allocate();
+		this->outColor()->allocate();
+
+		auto& color = this->outColor()->getData();
         auto& virtualPosition = this->inRigidPosition()->getData();
 		auto& capsuleId = this->outCapsuleId()->getData();
 		auto& constraintRE = this->outConstraintRE()->getData();
@@ -114,7 +139,7 @@ namespace dyno
 		nbQuery->update();
 
 		// 获取顶点所对应的几何体
-		// 返回DArray<Pair<顶点Id, JointID, CapsuleID>> 
+		// 返回DArray<Pair<JointID, 顶点Id, CapsuleID>> 
 		DArray<Pair3> p_cluster;
 
 		p_cluster.assign(nbQuery->outPJPair()->getData());
@@ -127,15 +152,22 @@ namespace dyno
         virtualPosition.resize(numPair);
 		capsuleId.resize(numPair);
 
-
 		//sort by capsule ID
 		cuExecute(numPair,
 			RGP_AdjustOrder,
 			p_cluster);
 		cuSynchronize();
-
 		thrust::sort(thrust::device, p_cluster.begin(), p_cluster.begin() + p_cluster.size());
 		m_pointClusters.assign(p_cluster);
+
+		// DEBUG
+		ViewGPUData<TDataType> p_view[3];
+		p_view[0].resize(numPair);
+		p_view[0].viewIm(m_pointClusters, 0);
+		p_view[1].resize(numPair);
+		p_view[1].viewIm(m_pointClusters, 1);
+		p_view[2].resize(numPair);
+		p_view[2].viewIm(m_pointClusters, 2);
 
 		// Get Rigid Coord
         cuExecute(numPair,
@@ -156,6 +188,21 @@ namespace dyno
         cuSynchronize();		
 		
 		// constraintRR
+
+		// set particle color 
+		color.resize(numPoint);
+		cuExecute(numPoint,
+			RGP_InitColor,
+			color,
+			Vec3f(0.f, 0.f, 0.f));
+		cuSynchronize();
+
+		cuExecute(numPair,
+			RGP_ConstraintColor,
+			m_pointClusters,
+			color,
+			Vec3f(79, 192, 232) / 255.0);
+		cuSynchronize();		
 
 		count.clear();
 		p_cluster.clear();

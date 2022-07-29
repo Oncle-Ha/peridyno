@@ -3,6 +3,7 @@
 #include "Matrix/MatrixFunc.h"
 #include "ParticleSystem/Kernel.h"
 
+
 namespace dyno
 {
 	IMPLEMENT_TCLASS(ElasticityModule, TDataType)
@@ -390,6 +391,18 @@ namespace dyno
 			this->enforceElasticity();
 			itor++;
 		}
+
+		// DEBUG
+		auto& ef = this->inVelocity()->getData();
+		int mN = ef.size();
+		ViewGPUData<TDataType> p_view[3];
+		p_view[0].resize(mN);
+		p_view[1].resize(mN);
+		p_view[2].resize(mN);
+		p_view[0].viewIm(ef, 0);
+		p_view[1].viewIm(ef, 1);
+		p_view[2].viewIm(ef, 2);
+
 		if(this->varOutForce()->getData())
 		{
 			this->updateforce();
@@ -398,6 +411,9 @@ namespace dyno
 		{
 			this->updateVelocity();
 		}
+		p_view[0].viewIm(ef, 0);
+		p_view[1].viewIm(ef, 1);
+		p_view[2].viewIm(ef, 2);
 	}
 
 	template<typename TDataType>

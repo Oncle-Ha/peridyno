@@ -27,13 +27,14 @@ namespace dyno
 		this->pushModule(m_nbrQuery);
 
 		auto m_elasticity = std::make_shared<ElasticityModule<TDataType>>();
+		this->varOutForce()->connect(m_elasticity->varOutForce());
 		this->varHorizon()->connect(m_elasticity->inHorizon());
 		this->inTimeStep()->connect(m_elasticity->inTimeStep());
 		this->inPosition()->connect(m_elasticity->inPosition());
 		this->inVelocity()->connect(m_elasticity->inVelocity());
 		this->inRestShape()->connect(m_elasticity->inRestShape());
 		m_nbrQuery->outNeighborIds()->connect(m_elasticity->inNeighborIds());
-		m_elasticity->varOutForce()->setValue(this->varOutForce()->getData());
+		
 		m_elasticity->outForce()->connect(this->outElasticForce());
 		this->pushModule(m_elasticity);
 	}

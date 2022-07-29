@@ -17,7 +17,7 @@
 #include "Module/ConstraintModule.h"
 
 #include "Peridynamics/NeighborData.h"
-
+#include "ViewGPUData.h"
 namespace dyno {
 
 	/**

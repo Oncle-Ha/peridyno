@@ -50,6 +50,7 @@ namespace dyno
             this->inRotate()->connect(gen->inRotate());
             this->inTranslate()->connect(gen->inTranslate());
             this->animationPipeline()->pushModule(gen);
+            gen->outColor()->connect(this->outColor());
         }
 
         // Solver Constraint

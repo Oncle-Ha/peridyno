@@ -16,6 +16,7 @@
 #pragma once
 #include "Module/ComputeModule.h"
 #include "JointTree.h"
+#include "ViewGPUData.h"
 
 namespace dyno 
 {
@@ -47,7 +48,7 @@ namespace dyno
         bool initializeImpl() override;
 
 	private:
-		// <CapsuleID, JointID, 顶点Id>
+		// <CapsuleID, 顶点Id, JointID>
         DArray<Pair3> m_pointClusters;
 		DArray<Quat<Real>> m_initQuatT;			
 		DArray<Quat<Real>> m_initQuatR;
@@ -100,5 +101,10 @@ namespace dyno
 		 * @brief Distance Joint
 		 */
 		DEF_ARRAY_OUT(Pair2, ConstraintRR, DeviceType::GPU, "Constraint: rigid & rigid");
+
+		/**
+		 * @brief Particle Color
+		 */
+		DEF_ARRAY_OUT(Vec3f, Color, DeviceType::GPU, "");
 	};
 }

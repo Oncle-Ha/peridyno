@@ -16,6 +16,7 @@
 #pragma once
 #include "Module/ConstraintModule.h"
 #include "Module/TopologyModule.h"
+#include "ViewGPUData.h"
 
 namespace dyno {
 
@@ -97,7 +98,7 @@ namespace dyno {
 
 		// DEF_VAR(Real, Lambda, 0.001, "Lame parameters: lambda");		
 
-		DEF_VAR(uint, IterationNumber, 10, "Iteration number");
+		DEF_VAR(uint, IterationNumber, 50, "Iteration number");
 
 	protected:
 		int mN;
@@ -115,7 +116,7 @@ namespace dyno {
 
 		// DArray<Matrix> mJ;
 
-
+		
 		DArray<Real> mInvK;
 		DArray<Real> mA;
 		DArray<Real> mAdy;

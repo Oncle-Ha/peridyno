@@ -1,7 +1,7 @@
 #pragma once
 #include "Module/NumericalIntegrator.h"
 #include "Attribute.h"
-
+#include "ViewGPUData.h"
 namespace dyno {
 	// update Particle Position & velocity
 	template<typename TDataType>
